@@ -1,0 +1,4 @@
+POST http://localhost:8185/channels/1/messages
+Authorization: d6312bf7-81dc-455e-bd19-9a8e1bb0d81d
+Content-Type: application/senml+json
+@./message.json

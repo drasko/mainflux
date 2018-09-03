@@ -33,8 +33,8 @@ import (
 const (
 	defDBHost   = "localhost"
 	defDBPort   = "5432"
-	defDBUser   = "mainflux"
-	defDBPass   = "mainflux"
+	defDBUser   = ""
+	defDBPass   = ""
 	defDBName   = "things"
 	defHTTPPort = "8180"
 	defGRPCPort = "8181"

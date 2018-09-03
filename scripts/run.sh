@@ -27,6 +27,8 @@ function cleanup {
 ###
 gnatsd &
 
+sleep 0.1
+
 ###
 # Users
 ###
@@ -59,6 +61,13 @@ cd -
 # CoAP
 ###
 # TODO: add coap
+
+###
+# MongoDB
+###
+MF_MONGO_WRITER_PORT=8187 $BUILD_DIR/mainflux-mongodb-writer &
+MF_MONGO_READER_PORT=8188 MF_THINGS_URL=localhost:8183 $BUILD_DIR/mainflux-mongodb-reader &
+
 
 trap cleanup EXIT
 

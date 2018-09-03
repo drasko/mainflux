@@ -71,15 +71,35 @@ services:
       - mainflux-base-net
 
   things-db:
-    image: postgres:10.2-alpine
+    image: cockroachdb/cockroach:latest
     container_name: mainflux-things-db
     restart: on-failure
     environment:
       POSTGRES_USER: mainflux
       POSTGRES_PASSWORD: mainflux
       POSTGRES_DB: things
+    #command: postgres -c 'max_connections=500' -c 'shared_buffers=2048MB'
+    command: start --logtostderr --insecure --cache=1GiB --max-sql-memory=2GiB --port=26257
     networks:
       - mainflux-base-net
+
+  things-db-init:
+    image: cockroachdb/cockroach:latest
+    container_name: mainflux-things-db-init
+    depends_on:
+      - things-db
+    restart: on-failure
+    environment:
+      POSTGRES_USER: mainflux
+      POSTGRES_PASSWORD: mainflux
+      POSTGRES_DB: things
+    entrypoint: "/bin/bash"
+    command: /init.sh
+    volumes:
+      - ./cockroach/init.sh:/init.sh
+    networks:
+      - mainflux-base-net
+
 
   things:
     image: mainflux/things:latest
@@ -93,7 +113,7 @@ services:
     restart: on-failure
     environment:
       MF_THINGS_DB_HOST: things-db
-      MF_THINGS_DB_PORT: 5432
+      MF_THINGS_DB_PORT: 26257
       MF_THINGS_DB_USER: mainflux
       MF_THINGS_DB_PASS: mainflux
       MF_THINGS_DB: things

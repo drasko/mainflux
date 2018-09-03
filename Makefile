@@ -63,4 +63,6 @@ release:
 	docker push mainflux/mqtt:$(version)
 
 run:
+	docker-compose -f docker/docker-compose.yml -f docker/addons/influxdb-writer/docker-compose.yml up
+rundev:
 	cd scripts && ./run.sh
