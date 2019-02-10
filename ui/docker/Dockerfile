@@ -14,5 +14,4 @@ RUN npm install --unsafe-perm=true --allow-root -g elm
 COPY . /app
 RUN elm make --optimize src/Main.elm
 
-ENTRYPOINT ["elm reactor"]
-
+ENTRYPOINT ["elm", "reactor"]
