@@ -1,5 +1,4 @@
 FROM node:boron-alpine
-MAINTAINER Mainflux
 
 COPY *.proto mqtt/* ./
 
