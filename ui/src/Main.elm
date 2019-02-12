@@ -13,7 +13,9 @@ import Bootstrap.Form.Textarea as Textarea
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
+import Bootstrap.Utilities.Size as Size
 import Bootstrap.Utilities.Spacing as Spacing
+import Bootstrap.Utilities.Display as Display
 import Browser
 import Browser.Navigation as Nav
 import Channel
@@ -222,6 +224,14 @@ subscriptions _ =
 -- VIEW
 
 
+mfStylesheet : Html msg
+mfStylesheet =
+    node "link"
+        [ rel "stylesheet"
+        , href "./css/mainflux.css"
+        ]
+        []
+
 view : Model -> Browser.Document Msg
 view model =
     { title = "Gateflux"
@@ -229,19 +239,22 @@ view model =
         let
             loggedIn : Bool
             loggedIn =
-                if String.length model.user.token > 0 then
+                --if String.length model.user.token > 0 then
+                if True then
                     True
 
                 else
                     False
 
             buttonAttrs =
-                Button.attrs [ style "color" "white" ]
+                Button.attrs
+                    [ style "text-align" "left"
+                    ]
 
             menu =
                 if loggedIn then
-                    [ ButtonGroup.linkButton [ Button.primary, Button.onClick Account, buttonAttrs ] [ text "Account" ]
-                    , ButtonGroup.linkButton [ Button.primary, Button.onClick Channels, buttonAttrs ] [ text "Channels" ]
+                    [ ButtonGroup.linkButton [ Button.primary, Button.onClick Account, Button.block, buttonAttrs ] [ text "Account" ]
+                    , ButtonGroup.linkButton [ Button.primary, Button.onClick Channels, Button.block, buttonAttrs ] [ text "Channels" ]
                     , ButtonGroup.linkButton [ Button.primary, Button.onClick Things, buttonAttrs ] [ text "Things" ]
                     , ButtonGroup.linkButton [ Button.primary, Button.onClick Connection, buttonAttrs ] [ text "Connection" ]
                     , ButtonGroup.linkButton [ Button.primary, Button.onClick Messages, buttonAttrs ] [ text "Messages" ]
@@ -278,18 +291,47 @@ view model =
                 else
                     Html.map UserMsg (User.view model.user)
         in
-        [ -- we use Bootstrap container defined at http://elm-bootstrap.info/grid
-          Grid.container []
+        -- we use Bootstrap container defined at http://elm-bootstrap.info/grid
+        [ Grid.containerFluid []
             [ CDN.stylesheet -- creates an inline style node with the Bootstrap CSS
-            , Grid.row []
-                [ Grid.col [] [ h1 [] [ text "Gateflux" ] ] ]
-            , Grid.row []
-                [ Grid.col []
-                    [ -- In this column we put the button group defined below
-                      ButtonGroup.linkButtonGroup [ ButtonGroup.vertical ] menu
+            , mfStylesheet
+            , Grid.row [ Row.attrs [ style "height" "100vh" ] ]
+                [ Grid.col
+                    [ Col.attrs
+                        [ style "background-color" "#113f67"
+                        , style "padding" "0"
+                        , style "color" "white"
+                        ]
                     ]
-                , Grid.col [ Col.xs10 ]
-                    [ content
+                    [ Grid.row []
+                        [ Grid.col
+                            [ Col.attrs [] ] [ h3 [] [ text "Mainflux" ] ]
+                        ]
+                    , Grid.row []
+                        [ Grid.col
+                            [ Col.attrs [] ]
+                            [ ButtonGroup.linkButtonGroup 
+                                [ ButtonGroup.vertical
+                                , ButtonGroup.attrs [ style "width" "100%" ]
+                                ] menu
+                            ]
+                        ]
+                    ]
+                , Grid.col
+                    [ Col.xs10
+                    , Col.attrs [] 
+                    ]
+                    [ Grid.row
+                        [ Row.attrs [] ]
+                        [ Grid.col
+                            [ Col.attrs [] ]
+                            [ text "drasko@mainflux.com" ]
+                        ]
+                    , Grid.row []
+                        [ Grid.col
+                            [ Col.attrs [] ]
+                            [ content ]
+                        ]
                     ]
                 ]
             ]
