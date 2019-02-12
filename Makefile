@@ -19,7 +19,7 @@ endef
 
 all: $(SERVICES) mqtt
 
-.PHONY: all $(SERVICES) dockers dockers_dev latest release mqtt
+.PHONY: all $(SERVICES) dockers dockers_dev latest release mqtt ui
 
 clean:
 	rm -rf ${BUILD_DIR}
@@ -66,6 +66,9 @@ $(DOCKERS_DEV):
 
 dockers_dev: $(DOCKERS_DEV)
 
+ui:
+	$(MAKE) -C ui
+
 mqtt:
 	cd mqtt && npm install
 
@@ -99,6 +102,9 @@ rundev:
 
 run:
 	docker-compose -f docker/docker-compose.yml up
+
+runui:
+	$(MAKE) -C ui run
 
 runlora:
 	docker-compose -f docker/docker-compose.yml up -d
