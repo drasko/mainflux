@@ -6,7 +6,8 @@
 # See the included LICENSE file for more details.
 ###
 
-FROM node:lts-alpine
+# Stage 0, based on Node.js, to build and compile Elm app
+FROM node:10.15.1-alpine as builder
 
 WORKDIR /app
 RUN npm install --unsafe-perm=true --allow-root -g elm
@@ -14,4 +15,7 @@ RUN npm install --unsafe-perm=true --allow-root -g elm
 COPY . /app
 RUN elm make --optimize src/Main.elm
 
-ENTRYPOINT ["elm", "reactor"]
+# Stage 1, based on Nginx, to have only the compiled app, ready for production with Nginx
+FROM nginx:1.14.2-alpine
+COPY --from=builder /app/index.html /usr/share/nginx/html
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf

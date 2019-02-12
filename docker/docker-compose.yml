@@ -14,7 +14,7 @@ networks:
 
 services:
   nginx:
-    image: nginx:1.13-alpine
+    image: nginx:1.14.2-alpine
     container_name: mainflux-nginx
     restart: on-failure
     volumes:
@@ -136,7 +136,7 @@ services:
     container_name: mainflux-ui
     restart: on-failure
     ports:
-      - 8000:8000
+      - 3000:3000
     networks:
       - mainflux-base-net
 

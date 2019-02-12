@@ -1,4 +1,4 @@
-FROM node:boron-alpine
+FROM node:10.15.1-alpine
 
 COPY *.proto mqtt/* ./
 
