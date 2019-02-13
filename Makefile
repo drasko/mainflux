@@ -1,3 +1,8 @@
+## Copyright (c) 2015-2019
+## Mainflux
+##
+## SPDX-License-Identifier: Apache-2.0
+
 BUILD_DIR = build
 SERVICES = users things http normalizer ws coap lora influxdb-writer influxdb-reader mongodb-writer mongodb-reader cassandra-writer cassandra-reader cli bootstrap
 DOCKERS = $(addprefix docker_,$(SERVICES))
