@@ -13,14 +13,19 @@ networks:
     driver: bridge
 
 services:
-  nginx:
-    image: nginx:1.14.2-alpine
-    container_name: mainflux-nginx
+  #nginx:
+  #  image: nginx:1.14.2-alpine
+  #  container_name: mainflux-nginx
+  openresty:
+    image: openresty/openresty:alpine
+    container_name: mainflux-openresty
     restart: on-failure
+    command: /usr/local/openresty/bin/openresty -c /etc/nginx/nginx.conf -g daemon\ off;
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./ssl/certs/mainflux-server.crt:/etc/ssl/certs/mainflux-server.crt
       - ./ssl/certs/mainflux-server.key:/etc/ssl/private/mainflux-server.key
+      - ./ssl/certs/ca.crt:/etc/ssl/certs/ca.crt
       - ./ssl/dhparam.pem:/etc/ssl/certs/dhparam.pem
     ports:
       - 80:80
