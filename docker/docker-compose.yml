@@ -20,9 +20,8 @@ services:
     image: openresty/openresty:alpine
     container_name: mainflux-openresty
     restart: on-failure
-    command: /usr/local/openresty/bin/openresty -c /etc/nginx/nginx.conf -g daemon\ off;
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
       - ./ssl/certs/mainflux-server.crt:/etc/ssl/certs/mainflux-server.crt
       - ./ssl/certs/mainflux-server.key:/etc/ssl/private/mainflux-server.key
       - ./ssl/certs/ca.crt:/etc/ssl/certs/ca.crt
