@@ -157,6 +157,7 @@ faIcons =
     , channels = "fas fa-broadcast-tower"
     , connection = "fas fa-plug"
     , messages = "far fa-paper-plane"
+    , version = "fa fa-code-branch"
     }
 
 
@@ -197,10 +198,10 @@ disableNext currPage total =
 
 
 genCardConfig : String -> List (Table.Row msg) -> Html msg
-genCardConfig title rows =
+genCardConfig faClass title rows =
     Card.config
         []
-        |> Card.headerH3 [] [ text title ]
+        |> Card.headerH3 [] [ div [ class "table_header" ] [ i [ style "margin-right" "15px", class faClass ] [], text title ]
         |> Card.block []
             [ Block.custom
                 (Table.table
