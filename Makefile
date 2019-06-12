@@ -15,15 +15,15 @@ endef
 
 define make_docker
 	docker build --no-cache \
-		--build-arg svc=$(subst docker_,,$(1)) \
-		--build-arg goarch=$(GOARCH) \
-		--build-arg goarm=$(GOARM) \
+		--build-arg SVC=$(subst docker_,,$(1)) \
+		--build-arg GOARCH=$(GOARCH) \
+		--build-arg GOARM=$(GOARM) \
 		--tag=mainflux/$(subst docker_,,$(1))$(2) \
 		-f docker/Dockerfile .
 endef
 
 define make_docker_dev
-	docker build --build-arg svc=$(subst docker_dev_,,$(1)) --tag=mainflux/$(subst docker_dev_,,$(1)) -f docker/Dockerfile.dev ./build
+	docker build --build-arg SVC=$(subst docker_dev_,,$(1)) --tag=mainflux/$(subst docker_dev_,,$(1)) -f docker/Dockerfile.dev ./build
 endef
 
 all: $(SERVICES) mqtt
