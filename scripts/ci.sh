@@ -80,7 +80,7 @@ push() {
 		make -j$NPROC latest
 		docker system prune -a -f
 		install_qemu
-		make latest_arm
+		GOARCH=arm make -j$NPROC latest
 	fi
 }
 

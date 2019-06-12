@@ -1,14 +1,16 @@
 FROM golang:1.10-alpine AS builder
-ARG SVC_NAME
-ARG GOARCH
-ARG GOARM
+ARG svc
+ARG goarch
+ARG goarm
+ENV GOARCH=$goarch
+ENV GOARM=$goarm
 
 WORKDIR /go/src/github.com/mainflux/mainflux
 COPY . .
 RUN apk update \
     && apk add make\
-    && make $SVC_NAME \
-    && mv build/mainflux-$SVC_NAME /exe
+    && make $svc \
+    && mv build/mainflux-$svc /exe
 
 FROM scratch
 COPY --from=builder /exe /

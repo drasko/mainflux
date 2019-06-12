@@ -1,4 +1,4 @@
 FROM scratch
-ARG SVC_NAME
-COPY mainflux-$SVC_NAME /exe
+ARG svc
+COPY mainflux-$svc /exe
 ENTRYPOINT ["/exe"]

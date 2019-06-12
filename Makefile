@@ -7,7 +7,6 @@ BUILD_DIR = build
 SERVICES = users things http normalizer ws coap lora influxdb-writer influxdb-reader mongodb-writer mongodb-reader cassandra-writer cassandra-reader postgres-writer postgres-reader cli bootstrap
 DOCKERS = $(addprefix docker_,$(SERVICES))
 DOCKERS_DEV = $(addprefix docker_dev_,$(SERVICES))
-DOCKERS_ARM = $(addprefix docker_arm_,$(SERVICES))
 CGO_ENABLED ?= 0
 
 define compile_service
@@ -15,15 +14,16 @@ define compile_service
 endef
 
 define make_docker
-	docker build --no-cache --build-arg SVC_NAME=$(subst docker_,,$(1)) --tag=mainflux/$(subst docker_,,$(1)) -f docker/Dockerfile .
-endef
-
-define make_docker_arm
-	docker build --no-cache --build-arg GOARCH=arm --build-arg GOARM=7 --build-arg SVC_NAME=$(subst docker_arm_,,$(1)) --tag=mainflux/$(subst docker_arm_,,$(1))-arm32v7 -f docker/Dockerfile .
+	docker build --no-cache \
+		--build-arg svc=$(subst docker_,,$(1)) \
+		--build-arg goarch=$(GOARCH) \
+		--build-arg goarm=$(GOARM) \
+		--tag=mainflux/$(subst docker_,,$(1))$(2) \
+		-f docker/Dockerfile .
 endef
 
 define make_docker_dev
-	docker build --build-arg SVC_NAME=$(subst docker_dev_,,$(1)) --tag=mainflux/$(subst docker_dev_,,$(1)) -f docker/Dockerfile.dev ./build
+	docker build --build-arg svc=$(subst docker_dev_,,$(1)) --tag=mainflux/$(subst docker_dev_,,$(1)) -f docker/Dockerfile.dev ./build
 endef
 
 all: $(SERVICES) mqtt
@@ -66,33 +66,29 @@ $(SERVICES):
 	$(call compile_service,$(@))
 
 $(DOCKERS):
+ifeq ($(GOARCH),)
 	$(call make_docker,$(@))
+else
+	$(call make_docker,$(@),-$(GOARCH))
+endif
 
 $(DOCKERS_DEV):
 	$(call make_docker_dev,$(@))
 
-$(DOCKERS_ARM):
-	$(call make_docker_arm,$(@))
-
 docker_ui:
 	$(MAKE) -C ui docker
 
-docker_arm_ui:
-	$(MAKE) -C ui docker_arm
-
 docker_mqtt:
 	# MQTT Docker build must be done from root dir because it copies .proto files
+ifeq ($(GOARCH), arm)
+	docker build --tag=mainflux/mqtt-arm -f mqtt/Dockerfile.arm .
+else
 	docker build --tag=mainflux/mqtt -f mqtt/Dockerfile .
-
-docker_arm_mqtt:
-	# MQTT Docker build must be done from root dir because it copies .proto files
-	docker build --tag=mainflux/mqtt-arm32v7 -f mqtt/Dockerfile.arm .
+endif
 
 dockers: $(DOCKERS) docker_ui docker_mqtt
 
 dockers_dev: $(DOCKERS_DEV)
-
-dockers_arm: $(DOCKERS_ARM) docker_arm_ui docker_arm_mqtt
 
 ui:
 	$(MAKE) -C ui
@@ -102,43 +98,41 @@ mqtt:
 
 define docker_push
 	for svc in $(SERVICES); do \
-		docker push mainflux/$$svc:$(1); \
+		docker push mainflux/$$svc$(2):$(1); \
 	done
-	docker push mainflux/ui:$(1)
-	docker push mainflux/mqtt:$(1)
-endef
-
-define docker_push_arm
-	for svc in $(SERVICES); do \
-		docker push mainflux/$$svc-arm32v7:$(1); \
-	done
-	docker push mainflux/ui-arm32v7:$(1)
-	docker push mainflux/mqtt-arm32v7:$(1)
+	docker push mainflux/ui$(2):$(1)
+	docker push mainflux/mqtt$(2):$(1)
 endef
 
 changelog:
 	git log $(shell git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s"
 
 latest: dockers
+ifeq ($(GOARCH),)
 	$(call docker_push,latest)
-
-latest_arm: dockers_arm
-	$(call docker_push_arm,latest)
+else
+	$(call docker_push,latest,-$(GOARCH))
+endif
 
 release:
 	$(eval version = $(shell git describe --abbrev=0 --tags))
 	git checkout $(version)
-	$(MAKE) dockers
-	$(MAKE) dockers_arm
+	GOARCH=$(GOARCH) $(MAKE) dockers
+ifeq ($(GOARCH),)
 	for svc in $(SERVICES); do \
 		docker tag mainflux/$$svc mainflux/$$svc:$(version); \
-		docker tag mainflux/$$svc-arm32v7 mainflux/$$svc-arm32v7:$(version); \
 	done
 	docker tag mainflux/ui mainflux/ui:$(version)
 	docker tag mainflux/mqtt mainflux/mqtt:$(version)
-	docker tag mainflux/ui-arm32v7 mainflux/ui-arm32v7:$(version)
-	docker tag mainflux/mqtt-arm32v7 mainflux/mqtt-arm32v7:$(version)
 	$(call docker_push,$(version))
+else
+	for svc in $(SERVICES); do \
+		docker tag mainflux/$$svc-$(GOARCH) mainflux/$$svc-$(GOARCH):$(version); \
+	done
+	docker tag mainflux/ui mainflux/ui-$(GOARCH):$(version)
+	docker tag mainflux/mqtt mainflux/mqtt-$(GOARCH):$(version)
+	$(call docker_push,$(version),-$(GOARCH))
+endif
 
 rundev:
 	cd scripts && ./run.sh
