@@ -17,7 +17,6 @@ ifeq ($(GOARCH), arm)
 else
 	docker build --tag=mainflux/ui -f docker/Dockerfile .
 endif
-	
 
 clean:
 	rm -f main.js

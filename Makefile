@@ -8,22 +8,28 @@ SERVICES = users things http normalizer ws coap lora influxdb-writer influxdb-re
 DOCKERS = $(addprefix docker_,$(SERVICES))
 DOCKERS_DEV = $(addprefix docker_dev_,$(SERVICES))
 CGO_ENABLED ?= 0
+GOARCH ?= amd64
 
 define compile_service
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build -ldflags "-s -w" -o ${BUILD_DIR}/mainflux-$(1) cmd/$(1)/main.go
 endef
 
 define make_docker
-	docker build --no-cache \
+	docker build \
+		--no-cache \
 		--build-arg SVC=$(subst docker_,,$(1)) \
 		--build-arg GOARCH=$(GOARCH) \
 		--build-arg GOARM=$(GOARM) \
-		--tag=mainflux/$(subst docker_,,$(1))$(2) \
+		--tag=mainflux/$(subst docker_,,$(1))-$(2) \
 		-f docker/Dockerfile .
 endef
 
 define make_docker_dev
-	docker build --build-arg SVC=$(subst docker_dev_,,$(1)) --tag=mainflux/$(subst docker_dev_,,$(1)) -f docker/Dockerfile.dev ./build
+	docker build \
+		--no-cache \
+		--build-arg SVC=$(subst docker_dev_,,$(1)) \
+		--tag=mainflux/$(subst docker_dev_,,$(1)) \
+		-f docker/Dockerfile.dev ./build
 endef
 
 all: $(SERVICES) mqtt
@@ -66,11 +72,7 @@ $(SERVICES):
 	$(call compile_service,$(@))
 
 $(DOCKERS):
-ifeq ($(GOARCH),)
-	$(call make_docker,$(@))
-else
-	$(call make_docker,$(@),-$(GOARCH))
-endif
+	$(call make_docker,$(@),$(GOARCH))
 
 $(DOCKERS_DEV):
 	$(call make_docker_dev,$(@))
@@ -98,41 +100,42 @@ mqtt:
 
 define docker_push
 	for svc in $(SERVICES); do \
-		docker push mainflux/$$svc$(2):$(1); \
+		docker push mainflux/$$svc-$(1):$(2); \
 	done
-	docker push mainflux/ui$(2):$(1)
-	docker push mainflux/mqtt$(2):$(1)
+	docker push mainflux/ui-$(1):$(2)
+	docker push mainflux/mqtt-$(1):$(2)
 endef
 
 changelog:
 	git log $(shell git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s"
 
+docker_manifest:
+	for svc in $(SERVICES); do \
+		docker manifest create mainflux/$$svc:$(1) mainflux/$$svc-amd64:$(1) mainflux/$$svc-arm:$(1); \
+		docker manifest annotate mainflux/$$svc-arm:$(1) --arch arm \
+		docker manifest push mainflux/$$svc:$(1)\
+	done
+	docker manifest create mainflux/ui mainflux/ui-amd64:$(1) mainflux/ui-arm:$(1)
+	docker manifest annotate mainflux/ui-arm:$(1) --arch arm
+	docker manifest push mainflux/ui:$(1)
+
+	docker manifest create mainflux/mqtt mainflux/mqtt-amd64:$(1) mainflux/mqtt-arm:$(1)
+	docker manifest annotate mainflux/mqtt-arm:$(1) --arch arm
+	docker manifest push mainflux/mqtt:$(1)
+
 latest: dockers
-ifeq ($(GOARCH),)
-	$(call docker_push,latest)
-else
-	$(call docker_push,latest,-$(GOARCH))
-endif
+	$(call docker_push,$(GOARCH),latest)
 
 release:
 	$(eval version = $(shell git describe --abbrev=0 --tags))
 	git checkout $(version)
 	GOARCH=$(GOARCH) $(MAKE) dockers
-ifeq ($(GOARCH),)
-	for svc in $(SERVICES); do \
-		docker tag mainflux/$$svc mainflux/$$svc:$(version); \
-	done
-	docker tag mainflux/ui mainflux/ui:$(version)
-	docker tag mainflux/mqtt mainflux/mqtt:$(version)
-	$(call docker_push,$(version))
-else
 	for svc in $(SERVICES); do \
 		docker tag mainflux/$$svc-$(GOARCH) mainflux/$$svc-$(GOARCH):$(version); \
 	done
 	docker tag mainflux/ui mainflux/ui-$(GOARCH):$(version)
 	docker tag mainflux/mqtt mainflux/mqtt-$(GOARCH):$(version)
-	$(call docker_push,$(version),-$(GOARCH))
-endif
+	$(call docker_push,$(GOARCH),$(version))
 
 rundev:
 	cd scripts && ./run.sh
