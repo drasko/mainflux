@@ -73,7 +73,7 @@ install_qemu() {
 	wget https://github.com/multiarch/qemu-user-static/releases/download/v2.11.1/qemu-arm-static.tar.gz  \
 		&& tar -xzf qemu-arm-static.tar.gz \
 		&& rm qemu-arm-static.tar.gz
-	sudo mv qemu-arm-static /usr/bin/
+	sudo cp qemu-arm-static /usr/bin/
 }
 
 push() {
