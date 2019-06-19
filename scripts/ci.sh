@@ -80,6 +80,7 @@ push() {
 	if test -n "$BRANCH_NAME"; then #&& test "$BRANCH_NAME" = "master"
 		echo "Pushing Docker images..."
 		make latest
+		docker system prune -a -f
 		install_qemu
 		GOARCH=arm GOARM=7 make latest
 		export DOCKER_CLI_EXPERIMENTAL=enabled
@@ -88,6 +89,6 @@ push() {
 }
 
 set -e
-setup
+#setup
 run_test
 push
