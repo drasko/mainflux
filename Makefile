@@ -85,7 +85,7 @@ docker_mqtt:
 ifeq ($(GOARCH), arm)
 	docker build --tag=mainflux/mqtt-arm -f mqtt/Dockerfile.arm .
 else
-	docker build --tag=mainflux/mqtt -f mqtt/Dockerfile .
+	docker build --tag=mainflux/mqtt-amd64 -f mqtt/Dockerfile .
 endif
 
 dockers: $(DOCKERS) docker_ui docker_mqtt
