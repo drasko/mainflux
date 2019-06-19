@@ -110,10 +110,10 @@ changelog:
 	git log $(shell git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s"
 
 docker_manifest:
-	for svc in $(SERVICES); do \
-		docker manifest create mainflux/$$svc:$(1) mainflux/$$svc-amd64:$(1) mainflux/$$svc-arm:$(1); \
-		docker manifest annotate mainflux/$$svc-arm:$(1) --arch arm \
-		docker manifest push mainflux/$$svc:$(1)\
+	for svc in $(SERVICES); do 
+		docker manifest create mainflux/$$svc:$(1) mainflux/$$svc-amd64:$(1) mainflux/$$svc-arm:$(1);
+		docker manifest annotate mainflux/$$svc-arm:$(1) --arch arm
+		docker manifest push mainflux/$$svc:$(1)
 	done
 	docker manifest create mainflux/ui mainflux/ui-amd64:$(1) mainflux/ui-arm:$(1)
 	docker manifest annotate mainflux/ui-arm:$(1) --arch arm
