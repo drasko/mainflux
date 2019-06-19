@@ -83,7 +83,7 @@ push() {
 		install_qemu
 		GOARCH=arm GOARM=7 make latest
 		export DOCKER_CLI_EXPERIMENTAL=enabled
-		make docker_manifest
+		make latest_manifest
 	fi
 }
 
