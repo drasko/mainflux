@@ -34,7 +34,7 @@ endef
 
 all: $(SERVICES) mqtt
 
-.PHONY: all $(SERVICES) dockers dockers_dev latest release mqtt ui
+.PHONY: all $(SERVICES) dockers dockers_dev latest release mqtt ui latest_manifest
 
 clean:
 	rm -rf ${BUILD_DIR}
@@ -109,25 +109,25 @@ endef
 changelog:
 	git log $(shell git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s"
 
-docker_manifest:
-	for svc in $(SERVICES); do 
-		docker manifest create mainflux/$$svc:$(1) mainflux/$$svc-amd64:$(1) mainflux/$$svc-arm:$(1);
-		docker manifest annotate mainflux/$$svc:$(1) mainflux/$$svc-arm:$(1) --arch arm
-		docker manifest push mainflux/$$svc:$(1)
+define docker_manifest
+	for svc in $(SERVICES); do \
+		docker manifest create mainflux/$$svc:$(1) mainflux/$$svc-amd64:$(1) mainflux/$$svc-arm:$(1); \
+		docker manifest annotate mainflux/$$svc:$(1) mainflux/$$svc-arm:$(1) --arch arm; \
+		docker manifest push mainflux/$$svc:$(1); \
 	done
 	docker manifest create mainflux/ui:$(1) mainflux/ui-amd64:$(1) mainflux/ui-arm:$(1)
 	docker manifest annotate mainflux/ui:$(1) mainflux/ui-arm:$(1) --arch arm
 	docker manifest push mainflux/ui:$(1)
-
 	docker manifest create mainflux/mqtt:$(1) mainflux/mqtt-amd64:$(1) mainflux/mqtt-arm:$(1)
 	docker manifest annotate mainflux/mqtt:$(1) mainflux/mqtt-arm:$(1) --arch arm
 	docker manifest push mainflux/mqtt:$(1)
+endef
 
 latest: dockers
 	$(call docker_push,$(GOARCH),latest)
 
 latest_manifest:
-	$(call docker_manifest, latest)
+	$(call docker_manifest,latest)
 
 release:
 	$(eval version = $(shell git describe --abbrev=0 --tags))
@@ -139,6 +139,7 @@ release:
 	docker tag mainflux/ui mainflux/ui-$(GOARCH):$(version)
 	docker tag mainflux/mqtt mainflux/mqtt-$(GOARCH):$(version)
 	$(call docker_push,$(GOARCH),$(version))
+	$(call docker_manifest,$(version))
 
 rundev:
 	cd scripts && ./run.sh
