@@ -82,7 +82,7 @@ push() {
 		make -j$NPROC latest
 		docker system prune -a -f
 		install_qemu
-		GOARCH=arm GOARM=7 -j$NPROC make latest
+		GOARCH=arm GOARM=7 make -j$NPROC latest
 		export DOCKER_CLI_EXPERIMENTAL=enabled
 		make latest_manifest
 	fi
