@@ -77,18 +77,18 @@ install_qemu() {
 }
 
 push() {
-	if test -n "$BRANCH_NAME"; then #&& test "$BRANCH_NAME" = "master"
+	if test -n "$BRANCH_NAME" && test "$BRANCH_NAME" = "master"; then 
 		echo "Pushing Docker images..."
-		make latest
+		make -j$NPROC latest
 		docker system prune -a -f
 		install_qemu
 		GOARCH=arm GOARM=7 make latest
 		export DOCKER_CLI_EXPERIMENTAL=enabled
-		make latest_manifest
+		make -j$NPROC latest_manifest
 	fi
 }
 
 set -e
-#setup
+setup
 run_test
 push
