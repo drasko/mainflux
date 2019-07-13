@@ -7,8 +7,7 @@
     handle_call/3,
     handle_cast/2,
     handle_info/2,
-    terminate/2,
-    loop/1
+    terminate/2
 ]).
 
 start_link() ->
@@ -22,10 +21,6 @@ start_link() ->
         {nats_conn, NatsConn}
     ]),
 
-    % Spawn SUB process
-    Subject = [<<"channel.*">>],
-    nats:sub(NatsConn, Subject),
-    spawn_link(?MODULE, loop, [NatsConn]),
     % Start genserver for PUB
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -53,15 +48,3 @@ init(_Args) ->
     % If the initialization is successful, the function
     % should return {ok,State}, {ok,State,Timeout} ..
     {ok, nats_state}.
-
-loop(Conn) ->
-    receive
-        {Conn, {msg, <<"teacup.control">>, _, <<"exit">>}} ->
-            io:format("Received exit msg.~n");
-        {Conn, Msg} ->
-            io:format("Received NATS msg: ~p~n", [Msg]),
-            loop(Conn);
-        Other ->
-            io:format("Received other msg: ~p~n", [Other])
-    end.
-
