@@ -7,11 +7,18 @@
     handle_call/3,
     handle_cast/2,
     handle_info/2,
-    terminate/2
+    terminate/2,
+    loop/1
 ]).
 
+-include("proto/message.hrl").
+
 start_link() ->
-    error_logger:info_msg("mfx_nats", []),
+    % Start genserver for PUB
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+init(_Args) ->
+    error_logger:info_msg("mfx_nats genserver has started (~w)~n", [self()]),
 
     [{_, NatsUrl}] = ets:lookup(mfx_cfg, nats_url),
     {ok, {_, _, NatsHost, NatsPort, _, _}} = http_uri:parse(NatsUrl),
@@ -21,11 +28,19 @@ start_link() ->
         {nats_conn, NatsConn}
     ]),
 
-    % Start genserver for PUB
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    % Spawn SUB process
+    Subject = <<"channel.>">>,
+    nats:sub(NatsConn, Subject),
+    %spawn(?MODULE, loop, [NatsConn]),
+    subscribe_handler(NatsConn),
+    error_logger:info_msg("****************************** INITIALIZED!", []),
+    {ok, []}.
 
 publish(Subject, Message) ->
     gen_server:cast(?MODULE, {publish, Subject, Message}).
+
+subscribe_handler(NatsConn) ->
+    gen_server:cast(?MODULE, {subscribe, NatsConn}).
 
 handle_call(Name, _From, _State) ->
     Reply = lists:flatten(io_lib:format("hello ~s from mfx_nats genserver", [Name])),
@@ -35,6 +50,10 @@ handle_cast({publish, Subject, Message}, _State) ->
     [{nats_conn, Conn}] = ets:lookup(mfx_cfg, nats_conn),
     error_logger:info_msg("mfx_nats genserver cast ~p ~p ~p", [Subject, Conn, Message]),
     NewState = nats:pub(Conn, Subject, #{payload => Message}),
+    {noreply, NewState};
+handle_cast({subscribe, NatsConn}, _State) ->
+    error_logger:info_msg("mfx_nats SUB handler ~p", [NatsConn]),
+    NewState = loop(NatsConn),
     {noreply, NewState}.
 
 handle_info(_Info, State) ->
@@ -43,8 +62,21 @@ handle_info(_Info, State) ->
 terminate(_Reason, _State) ->
     [].
 
-init(_Args) ->
-    error_logger:info_msg("mfx_nats genserver has started (~w)~n", [self()]),
-    % If the initialization is successful, the function
-    % should return {ok,State}, {ok,State,Timeout} ..
-    {ok, nats_state}.
+loop(Conn) ->
+    receive
+        {Conn, ready} ->
+            error_logger:info_msg("NATS ready", []),
+            loop(Conn);
+        {Conn, {msg, <<"teacup.control">>, _, <<"exit">>}} ->
+            error_logger:info_msg("NATS received exit msg", []);
+        {Conn, {msg, Subject, _ReplyTo, Payload}} ->
+            error_logger:info_msg("Received NATS msg: ~p~n", [Payload]),
+            {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(mfx_auth),
+            Topic = re:replace(Subject,"\\.","/",[global, {return, binary}]),
+            PublishFun(Topic, Payload, #{qos => 0, retain => false}),
+            error_logger:info_msg("Subject: ~p, Topic: ~p, PublishFunction: ~p~n", [Subject, Topic, PublishFun]),
+            loop(Conn);
+        Other ->
+            error_logger:info_msg("Received other msg: ~p~n", [Other]),
+            loop(Conn)
+    end.

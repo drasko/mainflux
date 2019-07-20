@@ -83,9 +83,9 @@ docker_ui:
 docker_mqtt:
 	# MQTT Docker build must be done from root dir because it copies .proto files
 ifeq ($(GOARCH), arm)
-	docker build --tag=mainflux/mqtt-arm -f mqtt/Dockerfile.arm .
+	docker build --tag=mainflux/mqtt-arm -f mqtt/verne/Dockerfile.arm .
 else
-	docker build --tag=mainflux/mqtt-amd64 -f mqtt/Dockerfile .
+	docker build --tag=mainflux/mqtt-amd64 -f mqtt/verne/Dockerfile .
 endif
 
 dockers: $(DOCKERS) docker_ui docker_mqtt
@@ -96,7 +96,7 @@ ui:
 	$(MAKE) -C ui
 
 mqtt:
-	cd mqtt && rebar3 compile
+	cd mqtt/verne && rebar3 compile
 
 define docker_push
 	for svc in $(SERVICES); do \
