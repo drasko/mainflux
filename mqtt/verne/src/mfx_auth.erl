@@ -6,7 +6,10 @@
 
 -export([auth_on_register/5,
          auth_on_publish/6,
-         auth_on_subscribe/3]).
+         auth_on_subscribe/3,
+         on_register/3,
+         on_client_gone/1
+        ]).
 
 -include("proto/message.hrl").
 
@@ -156,3 +159,22 @@ auth_on_subscribe(UserName, ClientId, [{_Topic, _QoS}|_] = Topics) ->
         _ ->
             {error, "SUB not authorized"}
     end.
+
+%%% Redis ES
+publish_event(UserName, Type) ->
+    Timestamp = os:system_time(second),
+    KeyValuePairs = [
+        "mainflux.mqtt", "*",
+        "thing_id", UserName,
+        "timestamp", Timestamp,
+        "event_type", Type
+    ],
+    mfx_redis:publish(KeyValuePairs).
+
+on_register(_Peer, _SubscriberId, UserName) ->
+    publish_event(UserName, "register"),
+    ok.
+
+on_client_gone(SubscriberId) ->
+    publish_event(SubscriberId, "deregister"),
+    ok.

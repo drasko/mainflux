@@ -71,10 +71,10 @@ loop(Conn) ->
             error_logger:info_msg("NATS received exit msg", []);
         {Conn, {msg, Subject, _ReplyTo, Payload}} ->
             error_logger:info_msg("Received NATS msg: ~p~n", [Payload]),
-            {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(mfx_auth),
+            {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(?MODULE),
             Topic = re:replace(Subject,"\\.","/",[global, {return, binary}]),
-            PublishFun(Topic, Payload, #{qos => 0, retain => false}),
             error_logger:info_msg("Subject: ~p, Topic: ~p, PublishFunction: ~p~n", [Subject, Topic, PublishFun]),
+            PublishFun(Topic, Payload, #{qos => 0, retain => false}),
             loop(Conn);
         Other ->
             error_logger:info_msg("Received other msg: ~p~n", [Other]),

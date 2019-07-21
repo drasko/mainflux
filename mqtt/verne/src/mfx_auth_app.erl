@@ -22,10 +22,15 @@ start(_StartType, _StartArgs) ->
         false -> "nats://localhost:4222";
         NatsEnv -> NatsEnv
     end,
+    RedisUrl = case os:getenv("MF_REDIS_URL") of
+        false -> "tcp://localhost:6379";
+        RedisEnv -> RedisEnv
+    end,
 
     ets:insert(mfx_cfg, [
         {auth_url, AuthUrl},
-        {nats_url, NatsUrl}
+        {nats_url, NatsUrl},
+        {redis_url, RedisUrl}
     ]),
 
     % Start Hackney

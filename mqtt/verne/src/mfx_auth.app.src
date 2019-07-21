@@ -9,7 +9,8 @@
                   teacup,
                   gpb,
                   jsone,
-                  hackney
+                  hackney,
+                  eredis
                  ]},
   {mod, { mfx_auth_app, []}},
   {env, [
