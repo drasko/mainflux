@@ -3,11 +3,15 @@
 -behaviour(auth_on_register_hook).
 -behaviour(auth_on_subscribe_hook).
 -behaviour(auth_on_publish_hook).
+-behaviour(on_register_hook).
+-behaviour(on_client_offline_hook).
+-behaviour(on_client_gone_hook).
 
 -export([auth_on_register/5,
          auth_on_publish/6,
          auth_on_subscribe/3,
          on_register/3,
+         on_client_offline/1,
          on_client_gone/1
         ]).
 
@@ -165,16 +169,31 @@ publish_event(UserName, Type) ->
     Timestamp = os:system_time(second),
     KeyValuePairs = [
         "mainflux.mqtt", "*",
-        "thing_id", UserName,
-        "timestamp", Timestamp,
+        "thing_id", binary_to_list(UserName),
+        "timestamp", integer_to_list(Timestamp),
         "event_type", Type
     ],
     mfx_redis:publish(KeyValuePairs).
 
-on_register(_Peer, _SubscriberId, UserName) ->
-    publish_event(UserName, "register"),
-    ok.
+on_register(_Peer, {_Mountpoint, ClientId} = _SubscriberId, UserName) ->
+    error_logger:info_msg("on_register, UserName: ~p, ClientId: ~p", [UserName, ClientId]),
+    ets:insert(mfx_client_map, {ClientId, UserName}),
+    publish_event(UserName, "register").
 
-on_client_gone(SubscriberId) ->
-    publish_event(SubscriberId, "deregister"),
-    ok.
+publish_erase(ClientId) ->
+    case ets:lookup(mfx_client_map, ClientId) of
+        [] ->
+            error_logger:info_msg("UserName for client ~p not found.", [ClientId]),
+            error;
+        [{ClientId, UserName}] ->
+            ets:delete_object(mfx_client_map, {ClientId, UserName}),
+            publish_event(UserName, "deregister")
+    end.
+
+on_client_offline({_Mountpoint, ClientId} = _SubscriberId) ->
+    error_logger:info_msg("on_client_offline, ClientId: ~p", [ClientId]),
+    publish_erase(ClientId).
+
+on_client_gone({_Mountpoint, ClientId} = _SubscriberId) ->
+    error_logger:info_msg("on_client_gone, ClientId: ~p", [ClientId]),
+    publish_erase(ClientId).

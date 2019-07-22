@@ -17,11 +17,14 @@
          %% this tells VerneMQ to look in the file 'mfx_auth'
          %% for the plugin hook functions. The format is:
          %%  {ModuleName, HookName, Arity, Opts}
-         {vmq_plugin_hooks, 
-          [
-           {mfx_auth, auth_on_register, 5, []},
-           {mfx_auth, auth_on_publish, 6, []},
-           {mfx_auth, auth_on_subscribe, 3, []}
-          ]}
+         {vmq_plugin_hooks,
+              [
+                     {mfx_auth, auth_on_register, 5, []},
+                     {mfx_auth, auth_on_publish, 6, []},
+                     {mfx_auth, auth_on_subscribe, 3, []},
+                     {mfx_auth, on_register, 3, []},
+                     {mfx_auth, on_client_offline, 1, []},
+                     {mfx_auth, on_client_gone, 1, []}
+              ]}
         ]}
  ]}.

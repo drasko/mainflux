@@ -33,6 +33,9 @@ start(_StartType, _StartArgs) ->
         {redis_url, RedisUrl}
     ]),
 
+    % Also, init one ETS table for keeping the #{ClientId => Username} mapping
+    ets:new(mfx_client_map, [set, named_table, public]),
+
     % Start Hackney
     application:ensure_all_started(hackney),
 

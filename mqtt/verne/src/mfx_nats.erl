@@ -24,9 +24,7 @@ init(_Args) ->
     {ok, {_, _, NatsHost, NatsPort, _, _}} = http_uri:parse(NatsUrl),
     {ok, NatsConn} = nats:connect(list_to_binary(NatsHost), NatsPort, #{buffer_size => 10}),
 
-    ets:insert(mfx_cfg, [
-        {nats_conn, NatsConn}
-    ]),
+    ets:insert(mfx_cfg, {nats_conn, NatsConn}),
 
     % Spawn SUB process
     Subject = <<"channel.>">>,
@@ -72,7 +70,8 @@ loop(Conn) ->
         {Conn, {msg, Subject, _ReplyTo, Payload}} ->
             error_logger:info_msg("Received NATS msg: ~p~n", [Payload]),
             {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(?MODULE),
-            Topic = re:replace(Subject,"\\.","/",[global, {return, binary}]),
+            % Topic needs to be in the form of the list, like [<<"channel">>,<<"6def78cd-b441-4fd8-8680-af7e3bbea187">>]
+            Topic = re:split(Subject, <<"\\.">>),
             error_logger:info_msg("Subject: ~p, Topic: ~p, PublishFunction: ~p~n", [Subject, Topic, PublishFun]),
             PublishFun(Topic, Payload, #{qos => 0, retain => false}),
             loop(Conn);
