@@ -28,10 +28,8 @@ init(_Args) ->
 
     % Spawn SUB process
     Subject = <<"channel.>">>,
-    nats:sub(NatsConn, Subject),
-    %spawn(?MODULE, loop, [NatsConn]),
+    nats:sub(NatsConn, Subject, #{queue_group => <<"mqtts">>}),
     subscribe_handler(NatsConn),
-    error_logger:info_msg("****************************** INITIALIZED!", []),
     {ok, []}.
 
 publish(Subject, Message) ->
