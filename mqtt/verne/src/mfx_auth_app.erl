@@ -22,7 +22,7 @@ start(_StartType, _StartArgs) ->
         false -> "nats://localhost:4222";
         NatsEnv -> NatsEnv
     end,
-    RedisUrl = case os:getenv("MF_MQTT_ADAPTER_ES_HOST") of
+    RedisUrl = case os:getenv("MF_MQTT_ADAPTER_ES_URL") of
         false -> "tcp://localhost:6379";
         RedisEnv -> RedisEnv
     end,

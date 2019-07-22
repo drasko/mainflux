@@ -19,7 +19,8 @@ init(_Args) ->
 
     [{_, RedisUrl}] = ets:lookup(mfx_cfg, redis_url),
     {ok, {_, _, RedisHost, RedisPort, _, _}} = http_uri:parse(RedisUrl),
-    {ok, RedisConn} = eredis:start_link(list_to_binary(RedisHost), RedisPort),
+    error_logger:info_msg("mfx_redis host: ~p,  port: ~p", [RedisHost, RedisPort]),
+    {ok, RedisConn} = eredis:start_link(RedisHost, RedisPort),
 
     ets:insert(mfx_cfg, [
         {redis_conn, RedisConn}
