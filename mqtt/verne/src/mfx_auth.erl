@@ -31,53 +31,47 @@
 %%  these hook functions run in the session context
 
 identify(undefined) ->
+    error_logger:info_msg("identify undefined", []),
     {error, undefined};
 identify(Password) ->
     error_logger:info_msg("identify: ~p", [Password]),
     [{_, AuthUrl}] = ets:lookup(mfx_cfg, auth_url),
-    URL = [AuthUrl, <<"/identify">>],
+    URL = [list_to_binary(AuthUrl), <<"/identify">>],
     ReqBody = jsone:encode(#{<<"token">> => Password}),
     ReqHeaders = [{<<"Content-Type">>, <<"application/json">>}],
-    error_logger:info_msg("access: ~p", [URL]),
+    error_logger:info_msg("identify: ~p", [URL]),
     {ok, Status, _, Ref} = hackney:request(post, URL, ReqHeaders, ReqBody),
     case Status of
         200 ->
             case hackney:body(Ref) of
                 {ok, RespBody} ->
                     {[{<<"id">>, Id}]} = jsone:decode(RespBody, [{object_format, tuple}]),
+                    error_logger:info_msg("identify: ~p", [URL]),
                     {ok, Id};
                 _ ->
                     error
             end;
+        403 ->
+            {error, invalid_credentials};
         _ ->
-            error
+            {error, auth_error}
     end.
 
 access(UserName, ChannelId) ->
     error_logger:info_msg("access: ~p ~p", [UserName, ChannelId]),
-    Password = get(UserName),
-    case Password of
-        undefined ->
-            {error, undefined};
+    [{_, AuthUrl}] = ets:lookup(mfx_cfg, auth_url),
+    URL = [list_to_binary(AuthUrl), <<"/channels/">>, ChannelId, <<"/access-by-id">>],
+    error_logger:info_msg("URL: ~p", [URL]),
+    ReqBody = jsone:encode(#{<<"thing_id">> => UserName}),
+    ReqHeaders = [{<<"Content-Type">>, <<"application/json">>}],
+    {ok, Status, _RespHeaders, _ClientRef} = hackney:request(post, URL, ReqHeaders, ReqBody),
+    case Status of
+        200 ->
+            ok;
+        403 ->
+            {error, forbidden};
         _ ->
-            [{_, AuthUrl}] = ets:lookup(mfx_cfg, auth_url),
-            URL = [AuthUrl, <<"/channels/">>, ChannelId, <<"/access">>],
-            error_logger:info_msg("URL: ~p", [URL]),
-            ReqBody = jsone:encode(#{<<"token">> => Password}),
-            ReqHeaders = [{<<"Content-Type">>, <<"application/json">>}],
-            {ok, Status, _, Ref} = hackney:request(post, URL, ReqHeaders, ReqBody),
-            case Status of
-                200 ->
-                    case hackney:body(Ref) of
-                        {ok, RespBody} ->
-                            {[{<<"id">>, Id}]} = jsone:decode(RespBody, [{object_format, tuple}]),
-                            {ok, Id};
-                        _ ->
-                            error
-                    end;
-                _ ->
-                    error
-            end
+            {error, authz_error}
     end.
 
 auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberId, UserName, Password, CleanSession) ->
@@ -95,12 +89,10 @@ auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberI
     %% 5. return {error, whatever} -> CONNACK_AUTH is sent
 
     case identify(Password) of
-        {ok, _} ->
-            % Save Username:Password mapping in process dictionary
-            put(UserName, Password),
+        {ok, _Id} ->
             ok;
-        _ ->
-            error
+        Other ->
+            Other
     end.
 
 auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, Payload, IsRetain) ->
@@ -122,15 +114,14 @@ auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, P
     % Topic is list of binaries, ex: [<<"channels">>, <<"1">>, <<"messages">>, <<"subtopic_1">>, ...]
     [<<"channels">>, ChannelId, Suffix] = Topic,
     case access(UserName, ChannelId) of
-        {ok, PublisherId} ->
+        ok ->
             RawMessage = #'RawMessage'{
                 'channel' = ChannelId,
-                'publisher' = PublisherId,
+                'publisher' = UserName,
                 'protocol' = "mqtt",
                 'payload' = Payload
             },
 
-            error_logger:info_msg("SUFFIX: ~p", [Suffix]),
             case Suffix of
                 <<"messages">> ->
                     Subject = [<<"channel.">>, ChannelId],
@@ -141,13 +132,14 @@ auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, P
                     mfx_nats:publish(Subject, message:encode_msg(RawMessage)),
                     ok;
                 _ ->
-                    error
+                    {error, "unknown subtopic"}
             end;
-        _ ->
-            error
+        Other ->
+            error_logger:info_msg("Error auth: ~p", [Other]),
+            Other
     end.
 
-auth_on_subscribe(UserName, ClientId, [{_Topic, _QoS}|_] = Topics) ->
+auth_on_subscribe(UserName, ClientId, [{Topic, _QoS}|_] = Topics) ->
     error_logger:info_msg("auth_on_subscribe: ~p ~p ~p", [UserName, ClientId, Topics]),
     %% do whatever you like with the params, all that matters
     %% is the return value of this function
@@ -156,13 +148,8 @@ auth_on_subscribe(UserName, ClientId, [{_Topic, _QoS}|_] = Topics) ->
     %% 2. return 'next' -> leave it to other plugins to decide
     %% 3. return {error, whatever} -> auth chain is stopped, and no SUBACK is sent
 
-    [_, ChannelId, _] = _Topic,
-    case access(UserName, ChannelId) of
-        {ok, _} ->
-            ok;
-        _ ->
-            {error, "SUB not authorized"}
-    end.
+    [_, ChannelId, _] = Topic,
+    access(UserName, ChannelId).
 
 %%% Redis ES
 publish_event(UserName, Type) ->

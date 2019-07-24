@@ -192,6 +192,8 @@ services:
       - mainflux-base-net
     volumes:
       - mainflux-es-redis-volume:/data
+    ports:
+      - 6379:6379
 
   mqtt-redis:
     image: redis:5.0-alpine

@@ -69,7 +69,15 @@ loop(Conn) ->
             error_logger:info_msg("Received NATS msg: ~p~n", [Payload]),
             {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(?MODULE),
             % Topic needs to be in the form of the list, like [<<"channel">>,<<"6def78cd-b441-4fd8-8680-af7e3bbea187">>]
-            Topic = re:split(Subject, <<"\\.">>),
+            Topic = case re:split(Subject, <<"\\.">>) of
+                [<<"channel">>, ChannelId] ->
+                    [<<"channels">>, ChannelId, <<"messages">>];
+                [<<"channel">>, ChannelId, Subtopic] ->
+                    [<<"channels">>, ChannelId, <<"messages">>, Subtopic];
+                Other ->
+                    error_logger:info_msg("Could not match topic: ~p~n", [Other]),
+                    error
+            end,
             error_logger:info_msg("Subject: ~p, Topic: ~p, PublishFunction: ~p~n", [Subject, Topic, PublishFun]),
             PublishFun(Topic, Payload, #{qos => 0, retain => false}),
             loop(Conn);
