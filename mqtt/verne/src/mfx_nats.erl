@@ -65,8 +65,9 @@ loop(Conn) ->
             loop(Conn);
         {Conn, {msg, <<"teacup.control">>, _, <<"exit">>}} ->
             error_logger:info_msg("NATS received exit msg", []);
-        {Conn, {msg, Subject, _ReplyTo, Payload}} ->
-            error_logger:info_msg("Received NATS msg: ~p~n", [Payload]),
+        {Conn, {msg, Subject, _ReplyTo, NatsMsg}} ->
+            #'RawMessage'{'payload' = Payload} = message:decode_msg(NatsMsg, 'RawMessage'),
+            error_logger:info_msg("Received NATS protobuf msg with payload: ~p~n", [Payload]),
             {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(?MODULE),
             % Topic needs to be in the form of the list, like [<<"channel">>,<<"6def78cd-b441-4fd8-8680-af7e3bbea187">>]
             Topic = case re:split(Subject, <<"\\.">>) of
