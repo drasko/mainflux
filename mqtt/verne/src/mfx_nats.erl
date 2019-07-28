@@ -8,6 +8,7 @@
     handle_cast/2,
     handle_info/2,
     terminate/2,
+    subscribe/1,
     loop/1
 ]).
 
@@ -27,17 +28,12 @@ init(_Args) ->
     ets:insert(mfx_cfg, {nats_conn, NatsConn}),
 
     % Spawn SUB process
-    Subject = <<"channel.>">>,
-    nats:sub(NatsConn, Subject, #{queue_group => <<"mqtts">>}),
-    subscribe_handler(NatsConn),
+    spawn_link(?MODULE, subscribe, [NatsConn]),
     {ok, []}.
 
 publish(Subject, Message) ->
-    error_logger:info_msg("*****************************mfx_nats genserver publish ~p ~p", [Subject, Message]),
+    error_logger:info_msg("mfx_nats genserver publish ~p ~p ~p", [Subject, Message]),
     gen_server:cast(?MODULE, {publish, Subject, Message}).
-
-subscribe_handler(NatsConn) ->
-    gen_server:cast(?MODULE, {subscribe, NatsConn}).
 
 handle_call(Name, _From, _State) ->
     Reply = lists:flatten(io_lib:format("hello ~s from mfx_nats genserver", [Name])),
@@ -45,12 +41,8 @@ handle_call(Name, _From, _State) ->
 
 handle_cast({publish, Subject, Message}, _State) ->
     [{nats_conn, Conn}] = ets:lookup(mfx_cfg, nats_conn),
-    error_logger:info_msg("*****************************mfx_nats genserver cast ~p ~p ~p", [Subject, Conn, Message]),
+    error_logger:info_msg("mfx_nats genserver cast ~p ~p ~p", [Subject, Conn, Message]),
     NewState = nats:pub(Conn, Subject, #{payload => Message}),
-    {noreply, NewState};
-handle_cast({subscribe, NatsConn}, _State) ->
-    error_logger:info_msg("mfx_nats SUB handler ~p", [NatsConn]),
-    NewState = loop(NatsConn),
     {noreply, NewState}.
 
 handle_info(_Info, State) ->
@@ -58,6 +50,11 @@ handle_info(_Info, State) ->
 
 terminate(_Reason, _State) ->
     [].
+
+subscribe(NatsConn) ->
+    Subject = <<"channel.>">>,
+    nats:sub(NatsConn, Subject, #{queue_group => <<"mqtts">>}),
+    loop(NatsConn).
 
 loop(Conn) ->
     receive

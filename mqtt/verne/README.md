@@ -11,8 +11,6 @@ default values.
 
 | Variable                | Description                      | Default               |
 |-------------------------|----------------------------------|-----------------------|
-| MF_MQTT_ADAPTER_PORT    | Service MQTT port                | 1883                  |
-| MF_MQTT_WS_PORT         | WebSocket port                   | 8880                  |
 | MF_NATS_URL             | NATS instance URL                | nats://localhost:4222 |
 | MF_THINGS_AUTH_HTTP_URL | Things service HTTP URL for Auth | http://localhost:8989 |
 | MF_MQTT_ADAPTER_ES_URL  | Redis ES URL                     | http://localhost:6379 |
@@ -27,7 +25,11 @@ DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
 DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
 DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
 DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH: /mainflux/_build/default
+DOCKER_VERNEMQ_LISTENER__WS__DEFAULT: "127.0.0.1:8880"
 ```
+
+> N.B. in this Docker env var setup, `__` replaces `.` in the config file,
+> so `plugins.mfx_auth.path` becomes `DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH`
 
 ## Deployment
 
@@ -48,7 +50,7 @@ services:
       restart: on-failure
       environment:
         MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
-        MF_MQTT_INSTANCE_ID: mqtt-adapter-1
+        MF_MQTT_INSTANCE_ID: mqtt-adapter
         MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
         MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
         MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
@@ -59,6 +61,7 @@ services:
         DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
         DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
         DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH: /mainflux/_build/default
+        DOCKER_VERNEMQ_LISTENER__WS__DEFAULT: "127.0.0.1:8880"
       ports:
         - ${MF_MQTT_ADAPTER_PORT}:${MF_MQTT_ADAPTER_PORT}
         - ${MF_MQTT_ADAPTER_WS_PORT}:${MF_MQTT_ADAPTER_WS_PORT}

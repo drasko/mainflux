@@ -142,7 +142,6 @@ auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, P
                 'contentType' = ContentType,
                 'payload' = Payload
             },
-            error_logger:info_msg("Publishing NATS message on NatsSubject: ~p", [NatsSubject]),
             mfx_nats:publish(NatsSubject, message:encode_msg(RawMessage)),
             ok;
         Other ->
