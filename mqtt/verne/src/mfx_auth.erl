@@ -119,14 +119,23 @@ auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, P
                 'channel' = ChannelId,
                 'publisher' = UserName,
                 'protocol' = "mqtt",
+                'contentType' = "application/senml+json",
                 'payload' = Payload
             },
-
             case Suffix of
                 <<"messages">> ->
                     Subject = [<<"channel.">>, ChannelId],
                     mfx_nats:publish(Subject, message:encode_msg(RawMessage)),
                     ok;
+                [<<"messages">>, Subtopic, <<"ct">>, ContentType] ->
+                    ContentType2 = re:replace(ContentType, "_","/",[global,{return,list}]),
+                    ContentType3 = re:replace(ContentType2, "-","+",[global,{return,list}]),
+                    RawMessage2 = RawMessage#'RawMessage'{'contentType' = ContentType3},
+                    Subject = [<<"channel.">>, ChannelId, <<".">>, string:join([[X] || X <- Subtopic], ".")],
+                    mfx_nats:publish(Subject, message:encode_msg(RawMessage2)),
+                    Topic2 = lists:subtract(Topic, [<<"ct">>, ContentType]),
+                    NewTopic = binary_to_list(Topic2),
+                    {ok, [{topic, NewTopic}]};
                 [<<"messages">>, Subtopic] ->
                     Subject = [<<"channel.">>, ChannelId, <<".">>, string:join([[X] || X <- Subtopic], ".")],
                     mfx_nats:publish(Subject, message:encode_msg(RawMessage)),
@@ -134,6 +143,7 @@ auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, P
                 _ ->
                     {error, "unknown subtopic"}
             end;
+            
         Other ->
             error_logger:info_msg("Error auth: ~p", [Other]),
             Other
