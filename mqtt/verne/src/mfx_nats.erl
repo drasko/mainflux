@@ -33,6 +33,7 @@ init(_Args) ->
     {ok, []}.
 
 publish(Subject, Message) ->
+    error_logger:info_msg("*****************************mfx_nats genserver publish ~p ~p", [Subject, Message]),
     gen_server:cast(?MODULE, {publish, Subject, Message}).
 
 subscribe_handler(NatsConn) ->
@@ -44,7 +45,7 @@ handle_call(Name, _From, _State) ->
 
 handle_cast({publish, Subject, Message}, _State) ->
     [{nats_conn, Conn}] = ets:lookup(mfx_cfg, nats_conn),
-    error_logger:info_msg("mfx_nats genserver cast ~p ~p ~p", [Subject, Conn, Message]),
+    error_logger:info_msg("*****************************mfx_nats genserver cast ~p ~p ~p", [Subject, Conn, Message]),
     NewState = nats:pub(Conn, Subject, #{payload => Message}),
     {noreply, NewState};
 handle_cast({subscribe, NatsConn}, _State) ->
@@ -66,15 +67,27 @@ loop(Conn) ->
         {Conn, {msg, <<"teacup.control">>, _, <<"exit">>}} ->
             error_logger:info_msg("NATS received exit msg", []);
         {Conn, {msg, Subject, _ReplyTo, NatsMsg}} ->
-            #'RawMessage'{'payload' = Payload} = message:decode_msg(NatsMsg, 'RawMessage'),
-            error_logger:info_msg("Received NATS protobuf msg with payload: ~p~n", [Payload]),
+            #'RawMessage'{'contentType' = ContentType, 'payload' = Payload} = message:decode_msg(NatsMsg, 'RawMessage'),
+            error_logger:info_msg("Received NATS protobuf msg with payload: ~p and ContentType: ~p~n", [Payload, ContentType]),
+            ContentType2 = re:replace(ContentType, "/","_",[global,{return,list}]),
+            ContentType3 = re:replace(ContentType2, "\\+","-",[global,{return,binary}]), 
             {_, PublishFun, {_, _}} = vmq_reg:direct_plugin_exports(?MODULE),
             % Topic needs to be in the form of the list, like [<<"channel">>,<<"6def78cd-b441-4fd8-8680-af7e3bbea187">>]
             Topic = case re:split(Subject, <<"\\.">>) of
                 [<<"channel">>, ChannelId] ->
-                    [<<"channels">>, ChannelId, <<"messages">>];
+                    case ContentType of
+                        <<"">> ->
+                            [<<"channels">>, ChannelId, <<"messages">>];
+                        _ ->
+                            [<<"channels">>, ChannelId, <<"messages">>, <<"ct">>, ContentType3]
+                    end;
                 [<<"channel">>, ChannelId, Subtopic] ->
-                    [<<"channels">>, ChannelId, <<"messages">>, Subtopic];
+                    case ContentType of
+                        <<"">> ->
+                            [<<"channels">>, ChannelId, <<"messages">>, Subtopic];
+                        _ ->
+                            [<<"channels">>, ChannelId, <<"messages">>, Subtopic, <<"ct">>, ContentType3]
+                    end;
                 Other ->
                     error_logger:info_msg("Could not match topic: ~p~n", [Other]),
                     error

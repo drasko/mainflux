@@ -95,6 +95,26 @@ auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberI
             Other
     end.
 
+parseTopic(Topic) when length(Topic) == 3 ->
+    ChannelId = lists:nth(2, Topic),
+    NatsSubject = [<<"channel.">>, ChannelId],
+    [{cnanel_id, ChannelId}, {content_type, ""}, {nats_subject, NatsSubject}];
+parseTopic(Topic) when length(Topic) > 3 ->
+    ChannelId = lists:nth(2, Topic),
+    case lists:nth(length(Topic) - 1, Topic) of
+        <<"ct">> ->
+            ContentType = lists:last(Topic),
+            ContentType2 = re:replace(ContentType, "_","/",[global,{return,list}]),
+            ContentType3 = re:replace(ContentType2, "-","\\+",[global,{return,list}]),
+            Subtopic = lists:sublist(Topic, 4, length(Topic) - 3 - 2),
+            NatsSubject = [<<"channel.">>, ChannelId, <<".">>, string:join([[X] || X <- Subtopic], ".")],
+            [{cnanel_id, ChannelId}, {content_type, ContentType3}, {nats_subject, NatsSubject}];
+        _ ->
+            Subtopic = lists:sublist(Topic, 4, length(Topic) - 3),
+            NatsSubject = [<<"channel.">>, ChannelId, <<".">>, string:join([[X] || X <- Subtopic], ".")],
+            [{cnanel_id, ChannelId}, {content_type, ""}, {nats_subject, NatsSubject}]
+    end.
+
 auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, Payload, IsRetain) ->
     error_logger:info_msg("auth_on_publish: ~p ~p ~p ~p ~p ~p", [UserName, SubscriberId, QoS, Topic, Payload, IsRetain]),
     %% do whatever you like with the params, all that matters
@@ -112,38 +132,19 @@ auth_on_publish(UserName, {_MountPoint, _ClientId} = SubscriberId, QoS, Topic, P
     %%
 
     % Topic is list of binaries, ex: [<<"channels">>, <<"1">>, <<"messages">>, <<"subtopic_1">>, ...]
-    [<<"channels">>, ChannelId, Suffix] = Topic,
+    [{cnanel_id, ChannelId}, {content_type, ContentType}, {nats_subject, NatsSubject}] = parseTopic(Topic),
     case access(UserName, ChannelId) of
         ok ->
             RawMessage = #'RawMessage'{
                 'channel' = ChannelId,
                 'publisher' = UserName,
                 'protocol' = "mqtt",
-                'contentType' = "application/senml+json",
+                'contentType' = ContentType,
                 'payload' = Payload
             },
-            case Suffix of
-                <<"messages">> ->
-                    Subject = [<<"channel.">>, ChannelId],
-                    mfx_nats:publish(Subject, message:encode_msg(RawMessage)),
-                    ok;
-                [<<"messages">>, Subtopic, <<"ct">>, ContentType] ->
-                    ContentType2 = re:replace(ContentType, "_","/",[global,{return,list}]),
-                    ContentType3 = re:replace(ContentType2, "-","+",[global,{return,list}]),
-                    RawMessage2 = RawMessage#'RawMessage'{'contentType' = ContentType3},
-                    Subject = [<<"channel.">>, ChannelId, <<".">>, string:join([[X] || X <- Subtopic], ".")],
-                    mfx_nats:publish(Subject, message:encode_msg(RawMessage2)),
-                    Topic2 = lists:subtract(Topic, [<<"ct">>, ContentType]),
-                    NewTopic = binary_to_list(Topic2),
-                    {ok, [{topic, NewTopic}]};
-                [<<"messages">>, Subtopic] ->
-                    Subject = [<<"channel.">>, ChannelId, <<".">>, string:join([[X] || X <- Subtopic], ".")],
-                    mfx_nats:publish(Subject, message:encode_msg(RawMessage)),
-                    ok;
-                _ ->
-                    {error, "unknown subtopic"}
-            end;
-            
+            error_logger:info_msg("Publishing NATS message on NatsSubject: ~p", [NatsSubject]),
+            mfx_nats:publish(NatsSubject, message:encode_msg(RawMessage)),
+            ok;
         Other ->
             error_logger:info_msg("Error auth: ~p", [Other]),
             Other
@@ -158,7 +159,7 @@ auth_on_subscribe(UserName, ClientId, [{Topic, _QoS}|_] = Topics) ->
     %% 2. return 'next' -> leave it to other plugins to decide
     %% 3. return {error, whatever} -> auth chain is stopped, and no SUBACK is sent
 
-    [_, ChannelId, _] = Topic,
+    [{cnanel_id, ChannelId}, _, _] = parseTopic(Topic),
     access(UserName, ChannelId).
 
 %%% Redis ES
