@@ -41,7 +41,7 @@ a compose file template that can be used to deploy the service container locally
 version: "2"
 services:
   mqtt-adapter:
-      image: mainflux/mqtt-amd64:latest
+      image: mainflux/mqtt:latest
       container_name: mainflux-mqtt
       depends_on:
         - things
