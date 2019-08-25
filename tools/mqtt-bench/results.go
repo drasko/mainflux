@@ -1,4 +1,4 @@
-package res
+package bench
 
 // RunResults describes results of a single client / run
 type RunResults struct {

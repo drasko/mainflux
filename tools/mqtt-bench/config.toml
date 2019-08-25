@@ -1,13 +1,31 @@
-broker = "tcp://localhost:1883"
-qos =2
-size =100
-count =100
-pubs =3
-subs =1
-format = "text"
+[mqtt]
+  [mqtt.broker]
+  url = "tcp://localhost:1883"
+
+  [mqtt.message]
+  size = 100
+  format = "text"
+  qos = 2
+  retain = true
+
+  [mqtt.tls]
+  mtls = false
+  skiptlsver = true
+  ca = "ca.crt"
+
+[test]
+pubs = 3
+subs = 1
+count = 100
+
+[log]
 quiet = true
-mtls = false
-skiptlsver = true
-ca = "ca.crt"
-channels = "channels.toml"
-retain = true
+
+[[mainflux]]
+channelID = 1
+thingID = 2
+thingKey = 3
+mtlsCert = "abc"
+mtlsKey = "efg"
+
+
