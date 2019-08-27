@@ -98,7 +98,7 @@ func main() {
 
 		b, err := ioutil.ReadFile(*ca)
 		if err != nil {
-			log.Fatalf("Failed to load CA cert")
+			log.Fatalf("Failed to read in CA cert")
 		}
 		block, _ := pem.Decode(b)
 		if block == nil {
@@ -113,7 +113,6 @@ func main() {
 	}
 
 	for i := 0; i < *num; i++ {
-
 		m, err := createThing(s, fmt.Sprintf("%s-thing-%d", *prefix, i), token)
 		if err != nil {
 			log.Println("Failed to create thing")
@@ -132,6 +131,8 @@ func main() {
 		things = append(things, m)
 		cert := ""
 		key := ""
+
+		// TLS
 		if *ssl {
 			var priv interface{}
 			priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
@@ -184,9 +185,10 @@ func main() {
 			key = keyOut.String()
 
 		}
-		connections.Connection = append(connections.Connection, connection{ch.ID, m.ID, m.Key, cert, key})
 
+		connections.Connection = append(connections.Connection, connection{ch.ID, m.ID, m.Key, cert, key})
 	}
+
 	writeConnsToToml(connections)
 }
 
@@ -224,14 +226,17 @@ func createThing(s sdk.SDK, name, token string) (sdk.Thing, error) {
 		Name: name,
 		Key:  t.Key,
 	}
+
 	return m, nil
 }
 
 func createChannel(s sdk.SDK, name, token string) (sdk.Channel, error) {
 	id, err := s.CreateChannel(sdk.Channel{Name: name}, token)
+
 	if err != nil {
 		return sdk.Channel{}, nil
 	}
+
 	c := sdk.Channel{
 		ID:   id,
 		Name: name,
@@ -243,7 +248,6 @@ func createChannel(s sdk.SDK, name, token string) (sdk.Channel, error) {
 func publicKey(priv interface{}) interface{} {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
-		return &k.PublicKey
 	case *ecdsa.PrivateKey:
 		return &k.PublicKey
 	default:

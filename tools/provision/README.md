@@ -15,10 +15,9 @@ A simple utility to create a list of channels and things connected with possibil
 
 ```
 go run main.go --host http://localhost --num 10 --username  test@mainflux.com --password test1234 --ssl --ca ../../docker/ssl/certs/ca.crt
-
 ```
 
-example entry in channels.toml fail
+Example entry in channels.toml file:
 
 ```
 [[Connection]]
