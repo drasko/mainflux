@@ -15,81 +15,101 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/mainflux/mainflux/tools/mqtt-bench/mqtt"
-	res "github.com/mainflux/mainflux/tools/mqtt-bench/results"
+	"github.com/mainflux/mainflux/tools/mqtt-bench"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
 )
 
-// Config - command optiopns from file configuration
-type Config struct {
-	Broker     string `toml:"broker"`
-	QoS        int    `toml:"qos"`
-	Size       int    `toml:"size"`
-	Count      int    `toml:"count"`
-	Pubs       int    `toml:"pubs"`
-	Subs       int    `toml:"subs"`
-	Format     string `toml:"format"`
-	Quiet      bool   `toml:"quiet"`
-	Mtls       bool   `toml:"mtls"`
-	Retain     bool   `toml:"retain"`
-	SkipTLSVer bool   `toml:"skiptlsver"`
-	CA         string `toml:"ca"`
-	Channels   string `toml:"channels"`
+// Keep struct names exported, otherwise Viper unmarshaling won't work
+type mqttBrokerCfg struct {
+	URL string `toml:"url" mapstructure:"url"`
+}
+
+type mqttMessageCfg struct {
+	Size   int    `toml:"size" mapstructure:"size"`
+	Format string `toml:"format" mapstructure:"format"`
+	QoS    int    `toml:"qos" mapstructure:"qos"`
+	Retain bool   `toml:"retain" mapstructure:"retain"`
+}
+
+type mqttTLSCfg struct {
+	MTLS       bool   `toml:"mtls" mapstructure:"mtls"`
+	SkipTLSVer bool   `toml:"skiptlsver" mapstructure:"skiptlsver"`
+	CA         string `toml:"ca" mapstructure:"ca"`
+}
+
+type mqttCfg struct {
+	Broker  mqttBrokerCfg  `toml:"broker" mapstructure:"broker"`
+	Message mqttMessageCfg `toml:"message" mapstructure:"message"`
+	TLS     mqttTLSCfg     `toml:"tls" mapstructure:"tls"`
+}
+
+type testCfg struct {
+	Count int `toml:"count" mapstructure:"count"`
+	Pubs  int `toml:"pubs" mapstructure:"pubs"`
+	Subs  int `toml:"subs" mapstructure:"subs"`
+}
+
+type logCfg struct {
+	Quiet bool `toml:"quiet" mapstructure:"quiet"`
+}
+
+type mainflux struct {
+	ConnFile string `toml:"connections_file" mapstructure:"connections_file"`
+}
+
+type mfConn struct {
+	ChannelID string `toml:"channelID" mapstructure:"channelID"`
+	ThingID   string `toml:"thingID" mapstructure:"thingID"`
+	ThingKey  string `toml:"thingKey" mapstructure:"thingKey"`
+	MTLSCert  string `toml:"mtlsCert" mapstructure:"mtlsCert"`
+	MTLSKey   string `toml:"mtlsKey" mapstructure:"mtlsKey"`
+}
+
+type config struct {
+	MQTT mqttCfg  `toml:"mqtt" mapstructure:"mqtt"`
+	Test testCfg  `toml:"test" mapstructure:"test"`
+	Log  logCfg   `toml:"log" mapstructure:"log"`
+	Mf   mainflux `toml:"mainflux" mapstructure:"mainflux"`
 }
 
 // JSONResults are used to export results as a JSON document
 type JSONResults struct {
-	Runs   []*res.RunResults `json:"runs"`
-	Totals *res.TotalResults `json:"totals"`
-}
-
-// Connection represents connection
-type connection struct {
-	ChannelID string `json:"ChannelID"`
-	ThingID   string `json:"ThingID"`
-	ThingKey  string `json:"ThingKey"`
-	MTLSCert  string `json:"MTLSCert"`
-	MTLSKey   string `json:"MTLSKey"`
-}
-
-// Connections - representing connections from channels file
-type Connections struct {
-	Connection []connection
+	Runs   []*bench.RunResults `json:"runs"`
+	Totals *bench.TotalResults `json:"totals"`
 }
 
 var (
-	broker     string
-	qos        int
-	size       int
-	count      int
-	pubs       int
-	subs       int
-	format     string
-	conf       string
-	channels   string
-	msg        string
-	quiet      bool
-	retain     bool
-	mtls       bool
-	skipTLSVer bool
-	ca         string
+	cfg     config
+	cfgFile string
 )
 
 var benchCmd = &cobra.Command{
-	Use: "mqtt-bench",
+	Use:   "mqtt-bench",
+	Short: "mqtt-bench is MQTT benchmark tool for Mainflux",
+	Long: `Tool for exctensive load and benchmarking of MQTT brokers used withing Mainflux platform.
+        Complete documentation is available at https://mainflux.readthedocs.io`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("broker - 	%s\n", broker)
-		fmt.Printf("mtls - 		%v\n", mtls)
-		fmt.Printf("retain - 	%v\n", retain)
-		fmt.Printf("qos - 		%d\n", qos)
-		fmt.Printf("pubs - 		%d\n", pubs)
-		fmt.Printf("subs - 		%d\n", subs)
-		if pubs < 1 && subs < 1 {
-			log.Fatal("Invalid arguments")
+		if len(args) < 1 {
+			cmd.Help()
 		}
+
+		// Set config
+		if cfgFile != "" {
+			viper.SetConfigFile(cfgFile)
+			if err := viper.ReadInConfig(); err != nil {
+				log.Printf("Failed to load config - %s", err.Error())
+			}
+		}
+
+		if err := viper.Unmarshal(&cfg); err != nil {
+			log.Printf("Unable to decode into struct, %v", err)
+		}
+
+		fmt.Println("CFG: ", cfg)
+
 		runBench()
 	},
 }
@@ -101,53 +121,43 @@ func main() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	// MQTT Broker
+	benchCmd.PersistentFlags().StringVarP(&cfg.MQTT.Broker.URL, "broker", "b", "tcp://localhost:1883",
+		"address for mqtt broker, for secure use tcps and 8883")
 
-	benchCmd.PersistentFlags().StringVarP(&broker, "broker", "b", "tcp://localhost:1883", "address for mqtt broker, for secure use tcps and 8883")
-	benchCmd.PersistentFlags().IntVarP(&qos, "qos", "q", 0, "QoS for published messages, values 0 1 2")
-	benchCmd.PersistentFlags().IntVarP(&size, "size", "s", 100, "Size of message payload bytes")
-	benchCmd.PersistentFlags().IntVarP(&count, "count", "n", 100, "Number of messages sent per publisher")
-	benchCmd.PersistentFlags().IntVarP(&subs, "subs", "", 10, "Number of subscribers")
-	benchCmd.PersistentFlags().IntVarP(&pubs, "pubs", "", 10, "Number of publishers")
-	benchCmd.PersistentFlags().StringVarP(&format, "format", "f", "text", "Output format: text|json")
-	benchCmd.PersistentFlags().StringVarP(&conf, "config", "g", "config.toml", "config file default is config.toml")
-	benchCmd.PersistentFlags().StringVarP(&channels, "channels", "", "channels.toml", "config file for channels")
-	benchCmd.PersistentFlags().StringVarP(&msg, "msg", "", "{\"n\":\"current\",\"t\":-4,\"v\":1.3}", "messg to be sent, SENML")
-	benchCmd.PersistentFlags().StringVarP(&ca, "ca", "", "ca.crt", "CA file")
-	benchCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "", false, "Supress messages")
-	benchCmd.PersistentFlags().BoolVarP(&retain, "retain", "r", false, "Retain mqtt messages")
-	benchCmd.PersistentFlags().BoolVarP(&mtls, "mtls", "m", false, "Use mtls for connection")
-	benchCmd.PersistentFlags().BoolVarP(&skipTLSVer, "skipTLSVer", "t", false, "Skip tls verification")
-}
+	// MQTT Message
+	benchCmd.PersistentFlags().IntVarP(&cfg.MQTT.Message.Size, "size", "z", 100, "Size of message payload bytes")
+	benchCmd.PersistentFlags().StringVarP(&cfg.MQTT.Message.Format, "format", "f", "text", "Output format: text|json")
+	benchCmd.PersistentFlags().IntVarP(&cfg.MQTT.Message.QoS, "qos", "q", 0, "QoS for published messages, values 0 1 2")
+	benchCmd.PersistentFlags().BoolVarP(&cfg.MQTT.Message.Retain, "retain", "r", false, "Retain mqtt messages")
 
-func initConfig() {
+	// MQTT TLS
+	benchCmd.PersistentFlags().BoolVarP(&cfg.MQTT.TLS.MTLS, "mtls", "m", false, "Use mtls for connection")
+	benchCmd.PersistentFlags().BoolVarP(&cfg.MQTT.TLS.SkipTLSVer, "skipTLSVer", "t", false, "Skip tls verification")
+	benchCmd.PersistentFlags().StringVarP(&cfg.MQTT.TLS.CA, "ca", "", "ca.crt", "CA file")
 
-	if conf != "" {
-		viper.SetConfigFile(conf)
-	}
-	c := Config{}
-	viper.AutomaticEnv() // read in environment variables that match
+	// Test params
+	benchCmd.PersistentFlags().IntVarP(&cfg.Test.Count, "count", "n", 100, "Number of messages sent per publisher")
+	benchCmd.PersistentFlags().IntVarP(&cfg.Test.Subs, "subs", "s", 10, "Number of subscribers")
+	benchCmd.PersistentFlags().IntVarP(&cfg.Test.Pubs, "pubs", "p", 10, "Number of publishers")
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	// Log params
+	benchCmd.PersistentFlags().BoolVarP(&cfg.Log.Quiet, "quiet", "", false, "Supress messages")
 
-		err = viper.Unmarshal(&c)
-		if err != nil {
-			log.Printf("failed to load config - %s\n", err.Error())
-		}
-		log.Printf("config file: %s\n", viper.ConfigFileUsed())
-	}
+	// Config file
+	benchCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "Config file")
+	benchCmd.PersistentFlags().StringVarP(&cfg.Mf.ConnFile, "connections", "", "connections.toml", "config file for Mainflux connections")
 }
 
 func runBench() {
 	var wg sync.WaitGroup
 	var err error
 
-	checkConnection(broker, 1)
-	subTimes := make(res.SubTimes)
+	checkConnection(cfg.MQTT.Broker.URL, 1)
+	subTimes := make(bench.SubTimes)
 	var caByte []byte
-	if mtls {
-		caFile, err := os.Open(ca)
+	if cfg.MQTT.TLS.MTLS {
+		caFile, err := os.Open(cfg.MQTT.TLS.CA)
 		defer caFile.Close()
 		if err != nil {
 			fmt.Println(err)
@@ -156,88 +166,93 @@ func runBench() {
 		caByte, _ = ioutil.ReadAll(caFile)
 	}
 
-	payload := string(make([]byte, size))
-	c := Connections{}
-	loadChansConfig(&channels, &c)
-	connections := c.Connection
+	payload := string(make([]byte, cfg.MQTT.Message.Size))
 
-	resCh := make(chan *res.RunResults)
+	mfConns := []mfConn{}
+	if _, err := toml.DecodeFile(cfg.Mf.ConnFile, &mfConns); err != nil {
+		log.Fatalf("Cannot load Mainflux connections config %s \nuse tools/provision to create file", cfg.Mf.ConnFile)
+	}
+
+	resCh := make(chan *bench.RunResults)
 	done := make(chan bool)
 
 	start := time.Now()
-	n := len(connections)
+	n := len(mfConns)
 	var cert tls.Certificate
-	for i := 0; i < subs; i++ {
+	for i := 0; i < cfg.Test.Subs; i++ {
 
-		con := connections[i%n]
+		mfConn := mfConns[i%n]
 
-		if mtls {
-			cert, err = tls.X509KeyPair([]byte(con.MTLSCert), []byte(con.MTLSKey))
+		if cfg.MQTT.TLS.MTLS {
+			cert, err = tls.X509KeyPair([]byte(mfConn.MTLSCert), []byte(mfConn.MTLSKey))
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		c := &mqtt.Client{
+		c := &bench.Client{
 			ID:         strconv.Itoa(i),
-			BrokerURL:  broker,
-			BrokerUser: con.ThingID,
-			BrokerPass: con.ThingKey,
-			MsgTopic:   getTestTopic(con.ChannelID),
-			MsgSize:    size,
-			MsgCount:   count,
-			MsgQoS:     byte(qos),
-			Quiet:      quiet,
-			Mtls:       mtls,
-			SkipTLSVer: skipTLSVer,
+			BrokerURL:  cfg.MQTT.Broker.URL,
+			BrokerUser: mfConn.ThingID,
+			BrokerPass: mfConn.ThingKey,
+			MsgTopic:   fmt.Sprintf("channels/%s/messages/test", mfConn.ChannelID),
+			MsgSize:    cfg.MQTT.Message.Size,
+			MsgCount:   cfg.Test.Count,
+			MsgQoS:     byte(cfg.MQTT.Message.QoS),
+			Quiet:      cfg.Log.Quiet,
+			Mtls:       cfg.MQTT.TLS.MTLS,
+			SkipTLSVer: cfg.MQTT.TLS.SkipTLSVer,
 			CA:         caByte,
 			ClientCert: cert,
-			Retain:     retain,
+			Retain:     cfg.MQTT.Message.Retain,
 			Message:    payload,
 		}
+
 		wg.Add(1)
+
 		go c.RunSubscriber(&wg, &subTimes, &done)
 	}
+
 	wg.Wait()
 
-	for i := 0; i < pubs; i++ {
+	for i := 0; i < cfg.Test.Pubs; i++ {
+		mfConn := mfConns[i%n]
 
-		con := connections[i%n]
-
-		if mtls {
-			cert, err = tls.X509KeyPair([]byte(con.MTLSCert), []byte(con.MTLSKey))
+		if cfg.MQTT.TLS.MTLS {
+			cert, err = tls.X509KeyPair([]byte(mfConn.MTLSCert), []byte(mfConn.MTLSKey))
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		c := &mqtt.Client{
+		c := &bench.Client{
 			ID:         strconv.Itoa(i),
-			BrokerURL:  broker,
-			BrokerUser: con.ThingID,
-			BrokerPass: con.ThingKey,
-			MsgTopic:   getTestTopic(con.ChannelID),
-			MsgSize:    size,
-			MsgCount:   count,
-			MsgQoS:     byte(qos),
-			Quiet:      quiet,
-			Mtls:       mtls,
-			SkipTLSVer: skipTLSVer,
+			BrokerURL:  cfg.MQTT.Broker.URL,
+			BrokerUser: mfConn.ThingID,
+			BrokerPass: mfConn.ThingKey,
+			MsgTopic:   fmt.Sprintf("channels/%s/messages/test", mfConn.ChannelID),
+			MsgSize:    cfg.MQTT.Message.Size,
+			MsgCount:   cfg.Test.Count,
+			MsgQoS:     byte(cfg.MQTT.Message.QoS),
+			Quiet:      cfg.Log.Quiet,
+			Mtls:       cfg.MQTT.TLS.MTLS,
+			SkipTLSVer: cfg.MQTT.TLS.SkipTLSVer,
 			CA:         caByte,
 			ClientCert: cert,
-			Retain:     retain,
+			Retain:     cfg.MQTT.Message.Retain,
 			Message:    payload,
 		}
+
 		go c.RunPublisher(resCh)
 	}
 
-	// collect the results
-	var results []*res.RunResults
-	if pubs > 0 {
-		results = make([]*res.RunResults, pubs)
+	// Collect the results
+	var results []*bench.RunResults
+	if cfg.Test.Pubs > 0 {
+		results = make([]*bench.RunResults, cfg.Test.Pubs)
 	}
 
-	for i := 0; i < pubs; i++ {
+	for i := 0; i < cfg.Test.Pubs; i++ {
 		results[i] = <-resCh
 	}
 
@@ -246,21 +261,24 @@ func runBench() {
 	if totals == nil {
 		return
 	}
-	// print stats
-	printResults(results, totals, format, quiet)
+
+	// Print sats
+	printResults(results, totals, cfg.MQTT.Message.Format, cfg.Log.Quiet)
 }
-func calculateTotalResults(results []*res.RunResults, totalTime time.Duration, subTimes *res.SubTimes) *res.TotalResults {
+
+func calculateTotalResults(results []*bench.RunResults, totalTime time.Duration, subTimes *bench.SubTimes) *bench.TotalResults {
 	if results == nil || len(results) < 1 {
 		return nil
 	}
-	totals := new(res.TotalResults)
-	totals.TotalRunTime = totalTime.Seconds()
-	var subTimeRunResults res.RunResults
+	totals := new(bench.TotalResults)
+	subTimeRunResults := bench.RunResults{}
 	msgTimeMeans := make([]float64, len(results))
 	msgTimeMeansDelivered := make([]float64, len(results))
 	msgsPerSecs := make([]float64, len(results))
 	runTimes := make([]float64, len(results))
 	bws := make([]float64, len(results))
+
+	totals.TotalRunTime = totalTime.Seconds()
 
 	totals.MsgTimeMin = results[0].MsgTimeMin
 	for i, res := range results {
@@ -305,6 +323,7 @@ func calculateTotalResults(results []*res.RunResults, totalTime time.Duration, s
 		runTimes[i] = res.RunTime
 		bws[i] = res.MsgsPerSec
 	}
+
 	totals.Ratio = float64(totals.Successes) / float64(totals.Successes+totals.Failures)
 	totals.AvgMsgsPerSec = stat.Mean(msgsPerSecs, nil)
 	totals.AvgRunTime = stat.Mean(runTimes, nil)
@@ -316,7 +335,7 @@ func calculateTotalResults(results []*res.RunResults, totalTime time.Duration, s
 	return totals
 }
 
-func printResults(results []*res.RunResults, totals *res.TotalResults, format string, quiet bool) {
+func printResults(results []*bench.RunResults, totals *bench.TotalResults, format string, quiet bool) {
 	switch format {
 	case "json":
 		jr := JSONResults{
@@ -334,7 +353,7 @@ func printResults(results []*res.RunResults, totals *res.TotalResults, format st
 	default:
 		if !quiet {
 			for _, res := range results {
-				fmt.Printf("======= CLIENT %d =======\n", res.ID)
+				fmt.Printf("======= CLIENT %s =======\n", res.ID)
 				fmt.Printf("Ratio:               %.3f (%d/%d)\n", float64(res.Successes)/float64(res.Successes+res.Failures), res.Successes, res.Successes+res.Failures)
 				fmt.Printf("Runtime (s):         %.3f\n", res.RunTime)
 				fmt.Printf("Msg time min (us):   %.3f\n", res.MsgTimeMin)
@@ -360,13 +379,9 @@ func printResults(results []*res.RunResults, totals *res.TotalResults, format st
 	return
 }
 
-func getTestTopic(channelID string) string {
-	return "channels/" + channelID + "/messages/test"
-}
+func loadChansConfig(path *string, mfc *mfConn) {
 
-func loadChansConfig(path *string, conns *Connections) {
-
-	if _, err := toml.DecodeFile(*path, conns); err != nil {
+	if _, err := toml.DecodeFile(*path, mfc); err != nil {
 		log.Fatalf("cannot load channels config %s \nuse tools/provision to create file", *path)
 	}
 }
@@ -401,5 +416,6 @@ func checkConnection(broker string, timeoutSecs int) {
 		log.Fatalf("Error: %s\n", err)
 		return
 	}
+
 	log.Printf("Connection to %s://%s:%s looks ok\n", network, host, port)
 }

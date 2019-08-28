@@ -1,4 +1,4 @@
-package mqtt
+package bench
 
 import (
 	"crypto/rsa"
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	res "github.com/mainflux/mainflux/tools/mqtt-bench/results"
 	mat "gonum.org/v1/gonum/mat"
 	stat "gonum.org/v1/gonum/stat"
 )
@@ -55,12 +54,12 @@ type message struct {
 }
 
 // RunPublisher - runs publisher
-func (c *Client) RunPublisher(r chan *res.RunResults) {
+func (c *Client) RunPublisher(r chan *RunResults) {
 	newMsgs := make(chan *message)
 	pubMsgs := make(chan *message)
 	doneGen := make(chan bool)
 	donePub := make(chan bool)
-	runResults := new(res.RunResults)
+	runResults := new(RunResults)
 
 	started := time.Now()
 	// Start generator
@@ -100,7 +99,7 @@ func (c *Client) RunPublisher(r chan *res.RunResults) {
 }
 
 // RunSubscriber - runs a subscriber
-func (c *Client) RunSubscriber(wg *sync.WaitGroup, subTimes *res.SubTimes, done *chan bool) {
+func (c *Client) RunSubscriber(wg *sync.WaitGroup, subTimes *SubTimes, done *chan bool) {
 	defer wg.Done()
 	// Start subscriber
 	c.subscribe(wg, subTimes, done)
@@ -122,7 +121,7 @@ func (c *Client) genMessages(ch chan *message, done chan bool) {
 	return
 }
 
-func (c *Client) subscribe(wg *sync.WaitGroup, subTimes *res.SubTimes, done *chan bool) {
+func (c *Client) subscribe(wg *sync.WaitGroup, subTimes *SubTimes, done *chan bool) {
 	clientID := fmt.Sprintf("sub-%v-%v", time.Now().Format(time.RFC3339Nano), c.ID)
 	c.ID = clientID
 
