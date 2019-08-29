@@ -1,7 +1,7 @@
 # Copyright (c) Mainflux
 # SPDX-License-Identifier: Apache-2.0
 
-PROGRAM = mqtt-bench
+PROGRAM = provision
 SOURCES = $(wildcard *.go) cmd/main.go
 
 all: $(PROGRAM)
