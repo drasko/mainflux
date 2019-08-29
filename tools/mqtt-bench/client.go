@@ -279,16 +279,14 @@ func checkConnection(broker string, timeoutSecs int) {
 
 	defer conClose()
 	if err, ok := err.(*net.OpError); ok && err.Timeout() {
-		fmt.Printf("Timeout error: %s\n", err.Error())
 		log.Fatalf("Timeout error: %s\n", err.Error())
 		return
 	}
 
 	if err != nil {
-		fmt.Printf("Error: %s\n", err.Error())
-		log.Fatalf("Error: %s\n", err)
+		log.Fatalf("Error: %s\n", err.Error())
 		return
 	}
 
-	log.Printf("Connection to %s://%s:%s looks ok\n", network, host, port)
+	log.Printf("Connection to %s://%s:%s looks OK\n", network, host, port)
 }

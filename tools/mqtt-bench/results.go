@@ -69,7 +69,6 @@ func calculateTotalResults(results []*RunResults, totalTime time.Duration, subTi
 
 	totals.MsgTimeMin = results[0].MsgTimeMin
 	for i, res := range results {
-
 		if len(*subTimes) > 0 {
 			times := mat.NewDense(1, len((*subTimes)[res.ID]), (*subTimes)[res.ID])
 
