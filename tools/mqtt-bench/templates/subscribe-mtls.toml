@@ -1,6 +1,6 @@
 [mqtt]
   [mqtt.broker]
-  url = "tcp://localhost:1883"
+  url = "tcps://localhost:1883"
 
   [mqtt.message]
   size = 100
