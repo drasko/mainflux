@@ -1,8 +1,11 @@
 # MQTT Benchmarking Tool
 
-A simple MQTT benchmarking tool for Mainflux platform
-(based on [@krylovsk](https://github.com/krylovsk)'s [mqtt-benchmark](github.com/krylovsk/mqtt-benchmark)).
+A simple MQTT benchmarking tool for Mainflux platform.
 
+It connects Mainflux things as subscribers over a number of channels and
+uses other Mainflux things to publish messages and create MQTT load.
+
+Mainflux things used must be pre-provisioned first, and Mainflux `provision` tool can be used for this purpose.
 
 ## Installation
 ```
@@ -14,8 +17,8 @@ make
 The tool supports multiple concurrent clients, publishers and subscribers configurable message size, etc:
 
 ```
-drasko@Marx:~/go/src/github.com/mainflux/mainflux/tools/mqtt-bench$ ./mqtt-bench --help
-Tool for exctensive load and benchmarking of MQTT brokers used withing Mainflux platform.
+./mqtt-bench --help
+Tool for exctensive load and benchmarking of MQTT brokers used within Mainflux platform.
 Complete documentation is available at https://mainflux.readthedocs.io
 
 Usage:
