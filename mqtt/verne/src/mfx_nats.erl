@@ -32,7 +32,7 @@ init(_Args) ->
     {ok, []}.
 
 publish(Subject, Message) ->
-    error_logger:info_msg("mfx_nats genserver publish ~p ~p ~p", [Subject, Message]),
+    error_logger:info_msg("mfx_nats genserver publish ~p ~p", [Subject, Message]),
     gen_server:cast(?MODULE, {publish, Subject, Message}).
 
 handle_call(Name, _From, _State) ->
