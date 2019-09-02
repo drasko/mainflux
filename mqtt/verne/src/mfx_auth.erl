@@ -35,59 +35,18 @@ identify(undefined) ->
     {error, undefined};
 identify(Password) ->
     error_logger:info_msg("identify: ~p", [Password]),
-    [{_, AuthUrl}] = ets:lookup(mfx_cfg, auth_url),
-    URL = [list_to_binary(AuthUrl), <<"/identify">>],
-    ReqBody = jsone:encode(#{<<"token">> => Password}),
-    ReqHeaders = [{<<"Content-Type">>, <<"application/json">>}],
-    Payload = <<>>,
-    Options = [{pool, default}],
-    error_logger:info_msg("identify: ~p", [URL]),
-    case hackney:request(post, URL, ReqHeaders, ReqBody, Payload, Options) of
-        {ok, Status, _, Ref} ->
-            case Status of
-                200 ->
-                    case hackney:body(Ref) of
-                        {ok, RespBody} ->
-                            {[{<<"id">>, Id}]} = jsone:decode(RespBody, [{object_format, tuple}]),
-                            error_logger:info_msg("identify: ~p", [URL]),
-                            {ok, Id};
-                        _ ->
-                            error
-                    end;
-                403 ->
-                    {error, invalid_credentials};
-                _ ->
-                    {error, auth_error}
-            end;
-        {error,checkout_timeout} ->
-            {error,checkout_timeout};
-        _ ->
-            {error,authn_req_error}
-    end.
+    Worker = poolboy:checkout(auth_pool),
+    Result = gen_server:call(Worker, {identify, Password}),
+    poolboy:checkin(auth_pool, Worker),
+    Result.
+
 access(UserName, ChannelId) ->
     error_logger:info_msg("access: ~p ~p", [UserName, ChannelId]),
-    [{_, AuthUrl}] = ets:lookup(mfx_cfg, auth_url),
-    URL = [list_to_binary(AuthUrl), <<"/channels/">>, ChannelId, <<"/access-by-id">>],
-    error_logger:info_msg("URL: ~p", [URL]),
-    ReqBody = jsone:encode(#{<<"thing_id">> => UserName}),
-    ReqHeaders = [{<<"Content-Type">>, <<"application/json">>}],
-    Payload = <<>>,
-    Options = [{pool, default}],
-    case hackney:request(post, URL, ReqHeaders, ReqBody, Payload, Options) of
-        {ok, Status, _RespHeaders, _ClientRef} ->
-            case Status of
-                200 ->
-                    ok;
-                403 ->
-                    {error, forbidden};
-                _ ->
-                    {error, authz_error}
-            end;
-        {error,checkout_timeout} ->
-            {error,checkout_timeout};
-        _ ->
-            {error,authz_req_error}
-    end.
+    Worker = poolboy:checkout(auth_pool),
+    Result = gen_server:call(Worker, {can_access_by_id, UserName, ChannelId}),
+    poolboy:checkin(auth_pool, Worker),
+    Result.
+
 auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberId, UserName, Password, CleanSession) ->
     error_logger:info_msg("auth_on_register: ~p ~p ~p ~p ~p", [Peer, SubscriberId, UserName, Password, CleanSession]),
     %% do whatever you like with the params, all that matters

@@ -10,6 +10,7 @@
                   gpb,
                   jsone,
                   hackney,
+                  poolboy,
                   eredis
                  ]},
   {mod, { mfx_auth_app, []}},

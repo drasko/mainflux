@@ -5,8 +5,8 @@
   [mqtt.message]
   size = 100
   format = "text"
-  qos = 2
-  retain = true
+  qos = 0
+  retain = false
 
   [mqtt.tls]
   mtls = false
@@ -14,12 +14,12 @@
   ca = "ca.crt"
 
 [test]
-pubs = 3
-subs = 1
-count = 100
+pubs = 1
+subs = 3
+count = 10
 
 [log]
 quiet = false
 
 [mainflux]
-connections_file = "../provision/connections.toml"
+connections_file = "../provision/mfconn.toml"
