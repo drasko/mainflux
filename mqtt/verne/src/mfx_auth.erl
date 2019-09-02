@@ -35,20 +35,63 @@ identify(undefined) ->
     {error, undefined};
 identify(Password) ->
     error_logger:info_msg("identify: ~p", [Password]),
+    GrpcConn = get(grpc_conn),
     Token = #{value => binary_to_list(Password)},
-    Worker = poolboy:checkout(grpc_pool),
-    Result = gen_server:call(Worker, {identify, Token}),
-    poolboy:checkin(grpc_pool, Worker),
-    Result.
+    {Status, Result} = internal_client:'IdentifyThing'(GrpcConn, Token, []),
+    case Status of
+      ok ->
+          #{
+              grpc_status := 0,
+              headers := #{<<":status">> := <<"200">>},
+              http_status := HttpStatus,
+              result :=
+                  #{value := ThingId},
+              status_message := <<>>,
+              trailers := #{<<"grpc-status">> := <<"0">>}
+          } = Result,
+
+          case HttpStatus of
+              200 ->
+                  {ok, ThingId};
+              _ ->
+                  {error, HttpStatus}
+          end;
+      _ ->
+          {error, Status}
+    end.
 
 
 access(UserName, ChannelId) ->
     error_logger:info_msg("access: ~p ~p", [UserName, ChannelId]),
+    GrpcConn = get(grpc_conn),
     AccessByIdReq = #{thingID => binary_to_list(UserName), chanID => binary_to_list(ChannelId)},
-    Worker = poolboy:checkout(grpc_pool),
-    Result = gen_server:call(Worker, {can_access_by_id, AccessByIdReq}),
-    poolboy:checkin(grpc_pool, Worker),
-    Result.
+    {Status, Result} = internal_client:'CanAccessByID'(GrpcConn, AccessByIdReq, []),
+    case Status of
+        ok ->
+        #{
+            grpc_status := 0,
+            headers := #{
+            <<":status">> := <<"200">>,
+            <<"content-type">> := <<"application/grpc+proto">>
+            },
+            http_status := HttpStatus,
+            result := #{},
+            status_message := <<>>,
+            trailers := #{
+            <<"grpc-message">> := <<>>,
+            <<"grpc-status">> := <<"0">>}
+        } = Result,
+
+        case HttpStatus of
+            200 ->
+                ok;
+            _ ->
+                {error, HttpStatus}
+        end;
+        
+        _ ->
+            {error, Status}
+    end.
 
 auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberId, UserName, Password, CleanSession) ->
     error_logger:info_msg("auth_on_register: ~p ~p ~p ~p ~p", [Peer, SubscriberId, UserName, Password, CleanSession]),
@@ -63,6 +106,12 @@ auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberI
     %%      - {clean_session, NewCleanSession::boolean}
     %% 4. return {error, invalid_credentials} -> CONNACK_CREDENTIALS is sent
     %% 5. return {error, whatever} -> CONNACK_AUTH is sent
+
+    [{_, GrpcUrl}] = ets:lookup(mfx_cfg, grpc_url),
+    {ok, {_, _, GrpcHost, GrpcPort, _, _}} = http_uri:parse(GrpcUrl),
+    error_logger:info_msg("grpc host: ~p,  port: ~p", [GrpcHost, GrpcPort]),
+    {ok, GrpcConn} = grpc_client:connect(tcp, GrpcHost, GrpcPort),
+    put(grpc_conn, GrpcConn),
 
     case identify(Password) of
         {ok, _Id} ->

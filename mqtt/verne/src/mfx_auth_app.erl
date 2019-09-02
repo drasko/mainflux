@@ -27,6 +27,7 @@ start(_StartType, _StartArgs) ->
         RedisEnv -> RedisEnv
     end,
 
+
     ets:insert(mfx_cfg, [
         {grpc_url, GrpcUrl},
         {nats_url, NatsUrl},
