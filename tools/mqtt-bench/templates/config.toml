@@ -15,7 +15,7 @@
 
 [test]
 pubs = 1
-subs = 3
+subs = 0
 count = 10
 
 [log]

@@ -23,7 +23,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    SizeArgs = [{size, 10}, {max_overflow, 10}],
+    SizeArgs = [{size, 100}, {max_overflow, 100}],
     PoolArgs = [{name, {local, auth_pool}}, {worker_module, mfx_http}],
     WorkerArgs = [],
     PoolSpec = poolboy:child_spec(auth_pool, PoolArgs ++ SizeArgs, WorkerArgs),
