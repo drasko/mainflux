@@ -1,10 +1,5 @@
-###
-# Copyright (c) 2015-2017 Mainflux
-#
-# Mainflux is licensed under an Apache license, version 2.0 license.
-# All rights not explicitly granted in the Apache license, version 2.0 are reserved.
-# See the included LICENSE file for more details.
-###
+# Copyright (c) Mainflux
+# SPDX-License-Identifier: Apache-2.0
 
 version: "3"
 
@@ -36,9 +31,6 @@ services:
       - ${MF_NGINX_HTTP_PORT}:${MF_NGINX_HTTP_PORT}
       - ${MF_NGINX_SSL_PORT}:${MF_NGINX_SSL_PORT}
       - ${MF_NGINX_MQTT_PORT}:${MF_NGINX_MQTT_PORT}
-      - ${MF_NGINX_MQTTS_PORT}:${MF_NGINX_MQTTS_PORT}
-      - ${MF_NGINX_MQTT_WS_PORT}:${MF_NGINX_MQTT_WS_PORT}
-      - ${MF_NGINX_MQTTS_WSS_PORT}:${MF_NGINX_MQTTS_WSS_PORT}
     networks:
       - mainflux-base-net
     environment:
@@ -220,9 +212,9 @@ services:
     volumes:
       - mainflux-mqtt-redis-volume:/data
 
-  mqtt-adapter:
-    image: mainflux/mqtt:latest
-    container_name: mainflux-mqtt
+  mqtt-adapter-1:
+    image: mainflux/mqtt-verne:latest
+    container_name: mainflux-mqtt-1
     depends_on:
       - things
       - nats
@@ -233,14 +225,86 @@ services:
       MF_MQTT_INSTANCE_ID: mqtt-adapter-1
       MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
       MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
-      MF_MQTT_ADAPTER_REDIS_HOST: mqtt-redis
-      MF_MQTT_ADAPTER_ES_HOST: es-redis
+      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
+      MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
       MF_NATS_URL: ${MF_NATS_URL}
-      MF_THINGS_URL: things:${MF_THINGS_AUTH_GRPC_PORT}
-      MF_JAEGER_URL: ${MF_JAEGER_URL}
+      MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
+      DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
+      DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
+      DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
+      DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH: /mainflux/_build/default
+      DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL: debug
+      MF_MQTT_VERNEMQ_GRPC_POOL_SIZE: 1
+      DOCKER_VERNEMQ_COMPOSE: 1
     ports:
       - ${MF_MQTT_ADAPTER_PORT}:${MF_MQTT_ADAPTER_PORT}
       - ${MF_MQTT_ADAPTER_WS_PORT}:${MF_MQTT_ADAPTER_WS_PORT}
+    networks:
+      - mainflux-base-net
+
+  mqtt-adapter-2:
+    image: mainflux/mqtt-verne:latest
+    container_name: mainflux-mqtt-2
+    depends_on:
+      - things
+      - nats
+      - mqtt-redis
+    restart: on-failure
+    environment:
+      MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
+      MF_MQTT_INSTANCE_ID: mqtt-adapter-2
+      MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
+      MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
+      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
+      MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
+      MF_NATS_URL: ${MF_NATS_URL}
+      MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
+      DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
+      DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
+      DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
+      DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH: /mainflux/_build/default
+      DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL: debug
+      MF_MQTT_VERNEMQ_GRPC_POOL_SIZE: 1
+      DOCKER_VERNEMQ_COMPOSE: 1
+      DOCKER_VERNEMQ_DISCOVERY_NODE: mqtt-adapter-1
+    ports:
+      - 18831:18831
+      - 8881:8881
+    depends_on:
+      - mqtt-adapter-1
+    networks:
+      - mainflux-base-net
+
+  mqtt-adapter-3:
+    image: mainflux/mqtt-verne:latest
+    container_name: mainflux-mqtt-3
+    depends_on:
+      - things
+      - nats
+      - mqtt-redis
+    restart: on-failure
+    environment:
+      MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
+      MF_MQTT_INSTANCE_ID: mqtt-adapter-3
+      MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
+      MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
+      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
+      MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
+      MF_NATS_URL: ${MF_NATS_URL}
+      MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
+      DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
+      DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
+      DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
+      DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH: /mainflux/_build/default
+      DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL: debug
+      MF_MQTT_VERNEMQ_GRPC_POOL_SIZE: 1
+      DOCKER_VERNEMQ_COMPOSE: 1
+      DOCKER_VERNEMQ_DISCOVERY_NODE: mqtt-adapter-1
+    ports:
+      - 1885:1885
+      - 8882:8882
+    depends_on:
+      - mqtt-adapter-1
     networks:
       - mainflux-base-net
 

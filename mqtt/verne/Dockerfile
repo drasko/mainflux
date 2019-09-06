@@ -5,6 +5,6 @@ COPY ./mqtt/verne .
 RUN apk add --no-cache git && \
   ./rebar3 compile
 
-FROM vernemq/vernemq:1.8.0-alpine
+FROM vernemq/vernemq:1.9.1-alpine
 WORKDIR /mainflux
 COPY --from=builder --chown=10000:10000 /mainflux .
