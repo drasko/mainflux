@@ -15,9 +15,9 @@
   ca = "ca.crt"
 
 [test]
-pubs = 1
+pubs = 500
 subs = 0
-count = 1
+count = 200
 
 [log]
 quiet = false
