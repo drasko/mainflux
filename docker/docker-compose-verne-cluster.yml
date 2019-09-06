@@ -234,7 +234,7 @@ services:
     ports:
       - 18831:1883
       - 8881:8080
-      - 7777:8888 # VerneMQ dasboard
+      - 7777:8888
     networks:
       - mainflux-base-net
 
@@ -264,7 +264,7 @@ services:
     ports:
       - 18832:1883
       - 8882:8080
-      - 7778:8888 # VerneMQ dasboard
+      - 7778:8888
     depends_on:
       - mqtt-adapter-1
     networks:
@@ -297,7 +297,7 @@ services:
     ports:
       - 18833:1883
       - 8883:8080
-      - 7779:8888 # VerneMQ dasboard
+      - 7779:8888
     depends_on:
       - mqtt-adapter-1
     networks:
