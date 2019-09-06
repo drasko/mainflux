@@ -44,6 +44,12 @@ services:
     environment:
       MF_UI_PORT: ${MF_UI_PORT}
     command: /entrypoint.sh
+    depends_on:
+      - things
+      - users
+      - http-adapter
+      - ws-adapter
+      - mqtt-adapter
 
   nats:
     image: nats:1.3.0

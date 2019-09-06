@@ -10,7 +10,6 @@ networks:
 volumes:
   mainflux-users-db-volume:
   mainflux-things-db-volume:
-  mainflux-mqtt-redis-volume:
   mainflux-things-redis-volume:
   mainflux-es-redis-volume:
 
@@ -20,7 +19,7 @@ services:
     container_name: mainflux-nginx
     restart: on-failure
     volumes:
-      - ./nginx/nginx-${AUTH-key}.conf:/etc/nginx/nginx.conf.template
+      - ./nginx/nginx-${AUTH-key}-mqtt-cluster.conf:/etc/nginx/nginx.conf.template
       - ./nginx/entrypoint.sh:/entrypoint.sh
       - ./ssl/authorization.js:/etc/nginx/authorization.js
       - ./ssl/certs/mainflux-server.crt:/etc/ssl/certs/mainflux-server.crt
@@ -36,6 +35,14 @@ services:
     environment:
       MF_UI_PORT: ${MF_UI_PORT}
     command: /entrypoint.sh
+    depends_on:
+      - things
+      - users
+      - http-adapter
+      - ws-adapter
+      - mqtt-adapter-1
+      - mqtt-adapter-2
+      - mqtt-adapter-3
 
   nats:
     image: nats:1.3.0
@@ -203,42 +210,34 @@ services:
     volumes:
       - mainflux-es-redis-volume:/data
 
-  mqtt-redis:
-    image: redis:5.0-alpine
-    container_name: mainflux-mqtt-redis
-    restart: on-failure
-    networks:
-      - mainflux-base-net
-    volumes:
-      - mainflux-mqtt-redis-volume:/data
-
   mqtt-adapter-1:
     image: mainflux/mqtt-verne:latest
     container_name: mainflux-mqtt-1
     depends_on:
       - things
       - nats
-      - mqtt-redis
+      - es-redis
     restart: on-failure
     environment:
       MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
       MF_MQTT_INSTANCE_ID: mqtt-adapter-1
       MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
       MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
-      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
       MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
       MF_NATS_URL: ${MF_NATS_URL}
       MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
+      DOCKER_VERNEMQ_LISTENER__WS__DEFAULT: localhost:${MF_MQTT_ADAPTER_WS_PORT}
+      DOCKER_VERNEMQ_LISTENER__TCP__DEFAULT: localhost:${MF_MQTT_ADAPTER_PORT}
       DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
       DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
       DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
       DOCKER_VERNEMQ_PLUGINS__MFX_AUTH__PATH: /mainflux/_build/default
       DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL: debug
       MF_MQTT_VERNEMQ_GRPC_POOL_SIZE: 1
-      DOCKER_VERNEMQ_COMPOSE: 1
     ports:
       - ${MF_MQTT_ADAPTER_PORT}:${MF_MQTT_ADAPTER_PORT}
       - ${MF_MQTT_ADAPTER_WS_PORT}:${MF_MQTT_ADAPTER_WS_PORT}
+      - 7777:8888 # VerneMQ dasboard
     networks:
       - mainflux-base-net
 
@@ -248,17 +247,18 @@ services:
     depends_on:
       - things
       - nats
-      - mqtt-redis
+      - es-redis
     restart: on-failure
     environment:
       MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
       MF_MQTT_INSTANCE_ID: mqtt-adapter-2
-      MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
-      MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
-      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
+      MF_MQTT_ADAPTER_PORT: 18832
+      MF_MQTT_ADAPTER_WS_PORT: 8881
       MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
       MF_NATS_URL: ${MF_NATS_URL}
       MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
+      DOCKER_VERNEMQ_LISTENER__WS__DEFAULT: localhost:8881
+      DOCKER_VERNEMQ_LISTENER__TCP__DEFAULT: localhost:18832
       DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
       DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
       DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
@@ -268,8 +268,9 @@ services:
       DOCKER_VERNEMQ_COMPOSE: 1
       DOCKER_VERNEMQ_DISCOVERY_NODE: mqtt-adapter-1
     ports:
-      - 18831:18831
+      - 18832:18832
       - 8881:8881
+      - 7778:8888 # VerneMQ dasboard
     depends_on:
       - mqtt-adapter-1
     networks:
@@ -281,17 +282,18 @@ services:
     depends_on:
       - things
       - nats
-      - mqtt-redis
+      - es-redis
     restart: on-failure
     environment:
       MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
       MF_MQTT_INSTANCE_ID: mqtt-adapter-3
-      MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
-      MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
-      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
+      MF_MQTT_ADAPTER_PORT: 18833
+      MF_MQTT_ADAPTER_WS_PORT: 8882
       MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
       MF_NATS_URL: ${MF_NATS_URL}
       MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
+      DOCKER_VERNEMQ_LISTENER__WS__DEFAULT: localhost:8882
+      DOCKER_VERNEMQ_LISTENER__TCP__DEFAULT: localhost:18833
       DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD: "off"
       DOCKER_VERNEMQ_PLUGINS__VMQ_ACL: "off"
       DOCKER_VERNEMQ_PLUGINS__MFX_AUTH: "on"
@@ -301,8 +303,9 @@ services:
       DOCKER_VERNEMQ_COMPOSE: 1
       DOCKER_VERNEMQ_DISCOVERY_NODE: mqtt-adapter-1
     ports:
-      - 1885:1885
+      - 18833:18833
       - 8882:8882
+      - 7779:8888 # VerneMQ dasboard
     depends_on:
       - mqtt-adapter-1
     networks:

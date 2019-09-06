@@ -36,6 +36,12 @@ services:
     environment:
       MF_UI_PORT: ${MF_UI_PORT}
     command: /entrypoint.sh
+    depends_on:
+      - things
+      - users
+      - http-adapter
+      - ws-adapter
+      - mqtt-adapter
 
   nats:
     image: nats:1.3.0
@@ -203,29 +209,18 @@ services:
     volumes:
       - mainflux-es-redis-volume:/data
 
-  mqtt-redis:
-    image: redis:5.0-alpine
-    container_name: mainflux-mqtt-redis
-    restart: on-failure
-    networks:
-      - mainflux-base-net
-    volumes:
-      - mainflux-mqtt-redis-volume:/data
-
   mqtt-adapter:
     image: mainflux/mqtt-verne:latest
     container_name: mainflux-mqtt
     depends_on:
       - things
       - nats
-      - mqtt-redis
     restart: on-failure
     environment:
       MF_MQTT_ADAPTER_LOG_LEVEL: ${MF_MQTT_ADAPTER_LOG_LEVEL}
       MF_MQTT_INSTANCE_ID: mqtt-adapter-1
       MF_MQTT_ADAPTER_PORT: ${MF_MQTT_ADAPTER_PORT}
       MF_MQTT_ADAPTER_WS_PORT: ${MF_MQTT_ADAPTER_WS_PORT}
-      MF_MQTT_ADAPTER_REDIS_URL: tcp://mqtt-redis:${MF_REDIS_TCP_PORT}
       MF_MQTT_ADAPTER_ES_URL: tcp://es-redis:${MF_REDIS_TCP_PORT}
       MF_NATS_URL: ${MF_NATS_URL}
       MF_THINGS_AUTH_GRPC_URL: http://things:${MF_THINGS_AUTH_GRPC_PORT}
