@@ -1,4 +1,17 @@
+# Mainflux
 build
-site/
+.vscode
+
+# MQTT
+mqtt/aedes/node_modules
+mqtt/verne/grpc
+mqtt/verne/grpc_client
+
+# Docker
 docker/nginx/snippets/mqtt-upstream.conf
 docker/nginx/snippets/mqtt-ws-upstream.conf
+
+# Tools
+tools/mqtt-bench/mqtt-bench
+tools/provision/mfconn.toml
+tools/provision/provision
