@@ -1,2 +1,4 @@
 build
 site/
+docker/nginx/snippets/mqtt-upstream.conf
+docker/nginx/snippets/mqtt-ws-upstream.conf
