@@ -58,7 +58,7 @@ MF_NORMALIZER_LOG_LEVEL=INFO MF_NORMALIZER_PORT=8184 MF_NATS_URL=localhost:4222 
 # Switch to top dir to find *.proto stuff when running MQTT broker
 
 cd ..
-MF_MQTT_ADAPTER_LOG_LEVEL=info MF_THINGS_URL=localhost:8183 node mqtt/mqtt.js &
+MF_MQTT_ADAPTER_LOG_LEVEL=info MF_THINGS_URL=localhost:8183 node mqtt/aedes/mqtt.js &
 cd -
 
 ###
