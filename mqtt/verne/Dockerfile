@@ -1,3 +1,6 @@
+# Copyright (c) Mainflux
+# SPDX-License-Identifier: Apache-2.0
+
 FROM erlang:21-alpine AS builder
 WORKDIR /mainflux
 

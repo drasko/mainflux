@@ -1,10 +1,6 @@
 #!/bin/bash
-#
-# Copyright (c) 2018
-# Mainflux
-#
+# Copyright (c) Mainflux
 # SPDX-License-Identifier: Apache-2.0
-#
 
 ###
 # Runs all Mainflux microservices (must be previously built and installed).
