@@ -4,7 +4,9 @@
 [![go report card][grc-badge]][grc-url]
 [![coverage][cov-badge]][cov-url]
 [![license][license]](LICENSE)
+[![FOSSA Status][fossa-badge]][fossa-url]
 [![chat][gitter-badge]][gitter]
+
 
 ![banner][banner]
 
@@ -106,11 +108,17 @@ Note that the best way to grab our attention is by sending PRs :sunglasses:.
 ## License
 [Apache-2.0](LICENSE)
 
+[![FOSSA Status Large][fossa-large]][fossa-large-url]
+
 [banner]: https://github.com/mainflux/mainflux/blob/master/docs/img/gopherBanner.jpg
 [ci-badge]: https://semaphoreci.com/api/v1/mainflux/mainflux/branches/master/badge.svg
 [ci-url]: https://semaphoreci.com/mainflux/mainflux
 [docs]: http://mainflux.readthedocs.io
 [docker]: https://www.docker.com
+[fossa-badge]: https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmainflux%2Fmainflux.svg?type=shield
+[fossa-url]: https://app.fossa.com/projects/git%2Bgithub.com%2Fmainflux%2Fmainflux?ref=badge_shield
+[fossa-large]: https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmainflux%2Fmainflux.svg?type=large
+[fossa-large-url]: https://app.fossa.com/projects/git%2Bgithub.com%2Fmainflux%2Fmainflux?ref=badge_large
 [forum]: https://groups.google.com/forum/#!forum/mainflux
 [gitter]: https://gitter.im/mainflux/mainflux?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [gitter-badge]: https://badges.gitter.im/Join%20Chat.svg
