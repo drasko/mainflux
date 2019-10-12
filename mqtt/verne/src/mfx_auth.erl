@@ -70,6 +70,7 @@ auth_on_register({_IpAddr, _Port} = Peer, {_MountPoint, _ClientId} = SubscriberI
                 UserName ->
                     ok;
                 _ ->
+                    error_logger:info_msg("auth_on_register failed - Id: ~p, Username: ~p", [Id, UserName]),
                     {error, invalid_credentials}
             end;
         Other ->
