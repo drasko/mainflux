@@ -41,7 +41,6 @@ identify(Password) ->
     poolboy:checkin(grpc_pool, Worker),
     Result.
 
-
 access(UserName, ChannelId) ->
     error_logger:info_msg("access: ~p ~p", [UserName, ChannelId]),
     AccessByIdReq = #{thingID => binary_to_list(UserName), chanID => binary_to_list(ChannelId)},
