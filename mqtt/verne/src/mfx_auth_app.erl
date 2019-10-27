@@ -26,11 +26,19 @@ start(_StartType, _StartArgs) ->
         false -> "";
         InstanceEnv -> InstanceEnv
     end,
+    PoolSize = case os:getenv("MF_MQTT_VERNEMQ_GRPC_POOL_SIZE") of
+        false ->
+            10;
+        PoolSizeEnv ->
+            {PoolSizeInt, _PoolSizeRest} = string:to_integer(PoolSizeEnv),
+            PoolSizeInt
+    end,
     
     ets:insert(mfx_cfg, [
         {nats_url, NatsUrl},
         {redis_url, RedisUrl},
-        {instance_id, InstanceId}
+        {instance_id, InstanceId},
+        {pool_size, PoolSize}
     ]),
 
     % Also, init one ETS table for keeping the #{ClientId => Username} mapping
@@ -45,11 +53,19 @@ start(_StartType, _StartArgs) ->
     error_logger:info_msg("gRPC host: ~p,  port: ~p", [GrpcHost, GrpcPort]),
 
     application:load(grpcbox),
-    application:set_env(grpcbox, client, #{channels => [{default_channel, [{http, GrpcHost, GrpcPort, []}], #{}}]}),
+    CL = create_channel_list(PoolSize, GrpcHost, GrpcPort, []),
+    application:set_env(grpcbox, client, #{channels => CL}),
     application:ensure_all_started(grpcbox),
 
     % Start the MFX Auth process
-    mfx_auth_sup:start_link().
+    mfx_auth_sup:start_link(PoolSize).
+
+create_channel_list(0, _GrpcHost, _GrpcPort, CL) ->
+    CL;
+create_channel_list(PoolSize, GrpcHost, GrpcPort, CL) ->
+    DC = list_to_atom("channel_" ++ integer_to_list(PoolSize)),
+    CL2 = CL ++ [{DC, [{http, GrpcHost, GrpcPort, []}], #{}}],
+    create_channel_list(PoolSize-1, GrpcHost, GrpcPort, CL2).
 
 stop(_State) ->
     ok.
