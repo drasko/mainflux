@@ -15,8 +15,6 @@
          on_client_gone/1
         ]).
 
--include("proto/message.hrl").
-
 %% This file demonstrates the hooks you typically want to use
 %% if your plugin deals with Authentication or Authorization.
 %%

@@ -12,8 +12,6 @@
     loop/1
 ]).
 
--include("proto/message.hrl").
-
 -record(state, {conn}).
 
 start_link() ->
