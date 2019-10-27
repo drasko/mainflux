@@ -52,6 +52,5 @@ handle_cast(_Request, State) ->
 handle_info(_Info, State) ->
     {noreply, State}.
 
-terminate(_Reason, _State) ->
-    [].
-
+terminate(Reason, State) ->
+    {stop, Reason, State}.

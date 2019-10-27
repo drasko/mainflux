@@ -68,6 +68,7 @@ create_channel_list(PoolSize, GrpcHost, GrpcPort, CL) ->
     create_channel_list(PoolSize-1, GrpcHost, GrpcPort, CL2).
 
 stop(_State) ->
+    application:stop(grpcbox),
     ok.
 
 
