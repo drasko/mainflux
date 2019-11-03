@@ -26,8 +26,8 @@ define make_docker
 
 	# If ARCH is `amd64` then retag image for convinience of devlopment
 	if [ $(GOARCH) = amd64 ]; then \
-            docker tag mainflux/$(svc)-$(2) mainflux/$(svc); \
-    fi
+		docker tag mainflux/$(svc)-$(2) mainflux/$(svc); \
+	fi
 endef
 
 define make_docker_dev
