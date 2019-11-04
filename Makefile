@@ -21,13 +21,8 @@ define make_docker
 		--build-arg SVC=$(svc) \
 		--build-arg GOARCH=$(GOARCH) \
 		--build-arg GOARM=$(GOARM) \
-		--tag=mainflux/$(svc)-$(2) \
+		--tag=mainflux/$(svc) \
 		-f docker/Dockerfile .
-
-	# If ARCH is `amd64` then retag image for convinience of devlopment
-	if [ $(GOARCH) = amd64 ]; then \
-		docker tag mainflux/$(svc)-$(2) mainflux/$(svc); \
-	fi
 endef
 
 define make_docker_dev
@@ -91,11 +86,7 @@ docker_ui:
 
 docker_mqtt:
 	# MQTT Docker build must be done from root dir because it copies .proto files
-ifeq ($(GOARCH), arm)
-	docker build --tag=mainflux/mqtt-arm -f mqtt/aedes/Dockerfile.arm .
-else
-	docker build --tag=mainflux/mqtt-amd64 -f mqtt/aedes/Dockerfile .
-endif
+	docker build --tag=mainflux/mqtt -f mqtt/aedes/Dockerfile.arm .
 
 docker_mqtt_verne:
 	docker build --tag=mainflux/mqtt-verne -f mqtt/verne/Dockerfile .
