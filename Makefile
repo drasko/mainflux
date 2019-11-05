@@ -86,7 +86,11 @@ docker_ui:
 
 docker_mqtt:
 	# MQTT Docker build must be done from root dir because it copies .proto files
+ifeq ($(GOARCH), arm)
 	docker build --tag=mainflux/mqtt -f mqtt/aedes/Dockerfile.arm .
+else
+	docker build --tag=mainflux/mqtt -f mqtt/aedes/Dockerfile .
+endif
 
 docker_mqtt_verne:
 	docker build --tag=mainflux/mqtt-verne -f mqtt/verne/Dockerfile .
