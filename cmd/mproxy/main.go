@@ -1,4 +1,4 @@
-package mproxy
+package main
 
 import (
 	"fmt"
@@ -30,24 +30,24 @@ const (
 	defMQTTPort       = "1883"
 	defMQTTTargetHost = "0.0.0.0"
 	defMQTTTargetPort = "1884"
-	envMQTTHost       = "MPROXY_MQTT_HOST"
-	envMQTTPort       = "MPROXY_MQTT_PORT"
-	envMQTTTargetHost = "MPROXY_MQTT_TARGET_HOST"
-	envMQTTTargetPort = "MPROXY_MQTT_TARGET_PORT"
+	envMQTTHost       = "MF_MQTT_ADAPTER_MQTT_HOST"
+	envMQTTPort       = "MF_MQTT_ADAPTER_MQTT_PORT"
+	envMQTTTargetHost = "MF_MQTT_ADAPTER_MQTT_TARGET_HOST"
+	envMQTTTargetPort = "MF_MQTT_ADAPTER_MQTT_TARGET_PORT"
 	defLogLevel       = "error"
-	envLogLevel       = "MPROXY_LOG_LEVEL"
+	envLogLevel       = "MF_MQTT_ADAPTER_LOG_LEVEL"
 	defThingsURL      = "localhost:8181"
 	defThingsTimeout  = "1" // in seconds
 	envThingsURL      = "MF_THINGS_URL"
-	envThingsTimeout  = "MF_HTTP_ADAPTER_THINGS_TIMEOUT"
+	envThingsTimeout  = "MF_MQTT_ADAPTER_THINGS_TIMEOUT"
 	defNatsURL        = broker.DefaultURL
 	envNatsURL        = "MF_NATS_URL"
 	defJaegerURL      = ""
 	envJaegerURL      = "MF_JAEGER_URL"
 	defClientTLS      = "false"
 	defCACerts        = ""
-	envClientTLS      = "MF_HTTP_ADAPTER_CLIENT_TLS"
-	envCACerts        = "MF_HTTP_ADAPTER_CA_CERTS"
+	envClientTLS      = "MF_MQTT_ADAPTER_CLIENT_TLS"
+	envCACerts        = "MF_MQTT_ADAPTER_CA_CERTS"
 )
 
 type config struct {
