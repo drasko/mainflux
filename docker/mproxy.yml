@@ -11,9 +11,9 @@ services:
     depends_on:
       - mqtt-adapter
 
-  emq:
+  emqx:
     image: emqx/emqx:latest
-    container_name: mainflux-emq
+    container_name: mainflux-emqx
     restart: on-failure
     environment:
       EMQX_LISTENER__TCP__EXTERNAL: 1884
@@ -26,7 +26,7 @@ services:
     image: mainflux/mproxy:latest
     container_name: mainflux-mqtt
     depends_on:
-      - emq
+      - emqx
       - things
       - nats
     restart: on-failure
@@ -38,7 +38,7 @@ services:
       MF_NATS_URL: ${MF_NATS_URL}
       MF_THINGS_URL: things:${MF_THINGS_AUTH_GRPC_PORT}
       MF_JAEGER_URL: ${MF_JAEGER_URL}
-      MF_MQTT_ADAPTER_MQTT_TARGET_HOST: emq
+      MF_MQTT_ADAPTER_MQTT_TARGET_HOST: emqx
       MF_MQTT_ADAPTER_MQTT_TARGET_PORT: 1884
     ports:
       - 18831:${MF_MQTT_ADAPTER_PORT}
