@@ -24,8 +24,6 @@ require (
 	github.com/lib/pq v1.0.0
 	github.com/mainflux/mproxy v0.0.0-20200105020228-9e724aa7ca08
 	github.com/mainflux/senml v1.0.0
-	github.com/mattn/go-colorable v0.0.9 // indirect
-	github.com/mattn/go-isatty v0.0.3 // indirect
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.6.0
 	github.com/opentracing/opentracing-go v1.1.0
