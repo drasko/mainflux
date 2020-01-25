@@ -11,10 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/mainflux/mainflux"
-	"github.com/mainflux/mainflux/http/nats"
 	"github.com/mainflux/mainflux/logger"
 	mqtt "github.com/mainflux/mainflux/mqtt/mproxy"
+	"github.com/mainflux/mainflux/mqtt/mproxy/nats"
+	mr "github.com/mainflux/mainflux/mqtt/mproxy/redis"
 	thingsapi "github.com/mainflux/mainflux/things/api/auth/grpc"
 	"github.com/mainflux/mproxy/pkg/events"
 	mp "github.com/mainflux/mproxy/pkg/mqtt"
@@ -48,6 +50,14 @@ const (
 	defCACerts        = ""
 	envClientTLS      = "MF_MQTT_ADAPTER_CLIENT_TLS"
 	envCACerts        = "MF_MQTT_ADAPTER_CA_CERTS"
+	envInstance       = "MF_MQTT_ADAPTER_INSTANCE"
+	defInstance       = ""
+	envESURL          = "MF_MQTT_ADAPTER_ES_URL"
+	envESPass         = "MF_MQTT_ADAPTER_ES_PASS"
+	envESDB           = "MF_MQTT_ADAPTER_ES_DB"
+	defESURL          = "localhost:6379"
+	defESPass         = ""
+	defESDB           = "0"
 )
 
 type config struct {
@@ -62,6 +72,10 @@ type config struct {
 	natsURL        string
 	clientTLS      bool
 	caCerts        string
+	instance       string
+	esURL          string
+	esPass         string
+	esDB           string
 }
 
 func main() {
@@ -91,8 +105,13 @@ func main() {
 	cc := thingsapi.NewClient(conn, thingsTracer, cfg.thingsTimeout)
 	pub := nats.NewMessagePublisher(nc)
 
+	rc := connectToRedis(cfg.esURL, cfg.esPass, cfg.esDB, logger)
+	defer rc.Close()
+
+	es := mr.NewEventStore(rc, cfg.instance)
+
 	// Event handler for MQTT hooks
-	evt := mqtt.New(cc, pub, logger, tracer)
+	evt := mqtt.New(cc, pub, es, logger, tracer)
 
 	errs := make(chan error, 2)
 
@@ -140,6 +159,10 @@ func loadConfig() config {
 		logLevel:       mainflux.Env(envLogLevel, defLogLevel),
 		clientTLS:      tls,
 		caCerts:        mainflux.Env(envCACerts, defCACerts),
+		instance:       mainflux.Env(envInstance, defInstance),
+		esURL:          mainflux.Env(envESURL, defESURL),
+		esPass:         mainflux.Env(envESPass, defESPass),
+		esDB:           mainflux.Env(envESDB, defESDB),
 	}
 }
 
@@ -189,6 +212,20 @@ func connectToThings(cfg config, logger logger.Logger) *grpc.ClientConn {
 		os.Exit(1)
 	}
 	return conn
+}
+
+func connectToRedis(redisURL, redisPass, redisDB string, logger logger.Logger) *redis.Client {
+	db, err := strconv.Atoi(redisDB)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to redis: %s", err))
+		os.Exit(1)
+	}
+
+	return redis.NewClient(&redis.Options{
+		Addr:     redisURL,
+		Password: redisPass,
+		DB:       db,
+	})
 }
 
 func proxyMQTT(cfg config, logger logger.Logger, evt events.Event, errs chan error) {
