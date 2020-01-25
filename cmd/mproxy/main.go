@@ -20,7 +20,7 @@ import (
 	thingsapi "github.com/mainflux/mainflux/things/api/auth/grpc"
 	"github.com/mainflux/mproxy/pkg/events"
 	mp "github.com/mainflux/mproxy/pkg/mqtt"
-	broker "github.com/nats-io/go-nats"
+	broker "github.com/nats-io/nats.go"
 	opentracing "github.com/opentracing/opentracing-go"
 	jconfig "github.com/uber/jaeger-client-go/config"
 	"google.golang.org/grpc"
