@@ -38,7 +38,8 @@ type Event struct {
 }
 
 // New creates new Event entity
-func New(tc mainflux.ThingsServiceClient, mp mainflux.MessagePublisher, es redis.EventStore, logger logger.Logger, tracer opentracing.Tracer) *Event {
+func New(tc mainflux.ThingsServiceClient, mp mainflux.MessagePublisher, es redis.EventStore,
+	logger logger.Logger, tracer opentracing.Tracer) *Event {
 	return &Event{
 		tc:     tc,
 		mp:     mp,
@@ -51,7 +52,8 @@ func New(tc mainflux.ThingsServiceClient, mp mainflux.MessagePublisher, es redis
 // AuthRegister is called on device connection,
 // prior forwarding to the MQTT broker
 func (e *Event) AuthRegister(clientID, username *string, password *[]byte) error {
-	e.logger.Info(fmt.Sprintf("AuthRegister() - clientID: %s, username: %s, password: %s", *clientID, *username, string(*password)))
+	e.logger.Info(fmt.Sprintf("AuthRegister() - clientID: %s, username: %s, password: %s",
+		*clientID, *username, string(*password)))
 
 	t := &mainflux.Token{
 		Value: string(*password),
@@ -119,9 +121,8 @@ func (e *Event) AuthSubscribe(clientID string, topics *[]string) error {
 }
 
 // Register - after client sucesfully connected
-func (e *Event) Register(clientID string) error {
+func (e *Event) Register(clientID string) {
 	e.logger.Info(fmt.Sprintf("Register() - clientID: %s", clientID))
-	return nil
 }
 
 func parseSubtopic(subtopic string) (string, error) {
@@ -154,14 +155,15 @@ func parseSubtopic(subtopic string) (string, error) {
 }
 
 // Publish - after client sucesfully published
-func (e *Event) Publish(clientID, topic string, payload []byte) error {
+func (e *Event) Publish(clientID, topic string, payload []byte) {
 	e.logger.Info(fmt.Sprintf("Publish() - clientID: %s, topic: %s", clientID, topic))
 	// Topics are in the format:
 	// channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
 
 	channelParts := channelRegExp.FindStringSubmatch(topic)
 	if len(channelParts) < 1 {
-		return errMalformedData
+		e.logger.Info(fmt.Sprintf("Error in mqtt publish %s", errMalformedData))
+		return
 	}
 
 	chanID := channelParts[1]
@@ -175,7 +177,8 @@ func (e *Event) Publish(clientID, topic string, payload []byte) error {
 
 	subtopic, err := parseSubtopic(subtopic)
 	if err != nil {
-		return err
+		e.logger.Info(fmt.Sprintf("Error in mqtt publish %s", err))
+		return
 	}
 
 	msg := mainflux.Message{
@@ -185,18 +188,16 @@ func (e *Event) Publish(clientID, topic string, payload []byte) error {
 		Subtopic:    subtopic,
 		Payload:     payload,
 	}
-	return e.mp.Publish(context.TODO(), "", msg)
+	e.mp.Publish(context.TODO(), "", msg)
 }
 
 // Subscribe - after client sucesfully subscribed
-func (e *Event) Subscribe(clientID string, topics []string) error {
+func (e *Event) Subscribe(clientID string, topics []string) {
 	e.logger.Info(fmt.Sprintf("Subscribe() - clientID: %s, topics: %s", clientID, strings.Join(topics, ",")))
-	return nil
 }
 
 // Unubscribe - after client unsubscribed
-func (e *Event) Unubscribe(clientID string, topics []string) error {
+func (e *Event) Unubscribe(clientID string, topics []string) {
 
 	e.logger.Info(fmt.Sprintf("Unubscribe() - clientID: %s, topics: %s", clientID, strings.Join(topics, ",")))
-	return nil
 }

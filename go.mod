@@ -23,7 +23,7 @@ require (
 	github.com/influxdata/influxdb v1.7.9
 	github.com/jmoiron/sqlx v1.2.1-0.20190319043955-cdf62fdf55f6
 	github.com/lib/pq v1.3.0
-	github.com/mainflux/mproxy v0.0.0-20200105020228-9e724aa7ca08
+	github.com/mainflux/mproxy v0.0.0-20200125222840-25c6600061bb
 	github.com/mainflux/senml v1.0.0
 	github.com/nats-io/nats.go v1.9.1
 	github.com/opentracing/opentracing-go v1.1.0
@@ -34,9 +34,7 @@ require (
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/testify v1.4.0
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
-	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.2.1
-	go.uber.org/atomic v1.5.1 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	gonum.org/v1/gonum v0.6.2
